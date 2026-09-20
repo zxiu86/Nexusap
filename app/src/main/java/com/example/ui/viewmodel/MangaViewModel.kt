@@ -81,8 +81,15 @@ data class HomeUiState(
     val reportChapterNumber: String = "",
     val isTestingGitHub: Boolean = false,
     val gitHubTestResult: com.example.data.network.GitHubConnectionTestResult? = null,
-    val gitHubSyncStatus: String? = null
+    val gitHubSyncStatus: String? = null,
+    val readChaptersMap: Map<String, Set<Int>> = emptyMap()
 ) {
+    val totalReadChaptersCount: Int
+        get() = readChaptersMap.values.sumOf { it.size }
+
+    val isCosmicAuraUnlocked: Boolean
+        get() = totalReadChaptersCount >= 500 || (currentUser?.isAdmin == true)
+
     val totalPages: Int
         get() = if (latestMangaGrid.isEmpty()) 1 else (latestMangaGrid.size + itemsPerPage - 1) / itemsPerPage
 
@@ -280,17 +287,37 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         val progressMap: Map<String, ChapterDownloadProgress>,
         val history: List<ReadingHistoryEntry>,
         val readLater: Set<String>,
-        val lastReadMap: Map<String, Int>
+        val lastReadMap: Map<String, Int>,
+        val readChaptersMap: Map<String, Set<Int>>
+    )
+
+    private data class BaseOffline(
+        val downloaded: List<DownloadedChapter>,
+        val progressMap: Map<String, ChapterDownloadProgress>,
+        val history: List<ReadingHistoryEntry>,
+        val readLater: Set<String>
     )
 
     private val _offlineDataFlow = combine(
-        repository.downloadedChaptersFlow,
-        repository.downloadProgressFlow,
-        repository.readingHistoryFlow,
-        repository.readLaterFlow,
-        repository.lastReadFlow
-    ) { downloaded, progress, history, readLater, lastReadMap ->
-        OfflineDataState(downloaded, progress, history, readLater, lastReadMap)
+        combine(
+            repository.downloadedChaptersFlow,
+            repository.downloadProgressFlow,
+            repository.readingHistoryFlow,
+            repository.readLaterFlow
+        ) { downloaded, progressMap, history, readLater ->
+            BaseOffline(downloaded, progressMap, history, readLater)
+        },
+        repository.lastReadFlow,
+        repository.readChaptersFlow
+    ) { base, lastReadMap, readChaptersMap ->
+        OfflineDataState(
+            downloaded = base.downloaded,
+            progressMap = base.progressMap,
+            history = base.history,
+            readLater = base.readLater,
+            lastReadMap = lastReadMap,
+            readChaptersMap = readChaptersMap
+        )
     }
 
     private data class UiControlsState(
@@ -481,7 +508,8 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             reportChapterNumber = authState.reportChapterNumber,
             isTestingGitHub = authState.isTestingGitHub,
             gitHubTestResult = authState.gitHubTestResult,
-            gitHubSyncStatus = authState.gitHubSyncStatus
+            gitHubSyncStatus = authState.gitHubSyncStatus,
+            readChaptersMap = offlineData.readChaptersMap
         )
     }.stateIn(
         viewModelScope,
@@ -993,6 +1021,10 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateCardAnimationEnabled(enabled: Boolean) {
         settingsManager.updateCardAnimationEnabled(enabled)
+    }
+
+    fun updateCosmicSpaceFooterEnabled(enabled: Boolean) {
+        settingsManager.updateCosmicSpaceFooterEnabled(enabled)
     }
 
     fun updatePreventChapterCache(prevent: Boolean) {

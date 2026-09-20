@@ -176,6 +176,7 @@ fun HomeScreen(
     onUpdateBackgroundStyle: (Int) -> Unit = {},
     onUpdateAccentColor: (Int) -> Unit = {},
     onUpdateCardAnimationEnabled: (Boolean) -> Unit = {},
+    onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit = {},
     onDeleteAllDownloads: () -> Unit = {},
     onOpenAuthDialog: () -> Unit = {},
@@ -206,6 +207,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     var showFavoritesPopup by remember { mutableStateOf(false) }
+    val isCosmicAuraActive = uiState.appSettings.cosmicSpaceFooterEnabled && uiState.isCosmicAuraUnlocked
 
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -269,6 +271,10 @@ fun HomeScreen(
                 isRefreshing = uiState.isRefreshing,
                 currentUser = uiState.currentUser,
                 isCloudSyncing = uiState.isCloudSyncing,
+                totalReadChapters = uiState.totalReadChaptersCount,
+                isCosmicUnlocked = uiState.isCosmicAuraUnlocked,
+                isCosmicActive = isCosmicAuraActive,
+                onToggleCosmicAura = { onUpdateCosmicSpaceFooterEnabled(!uiState.appSettings.cosmicSpaceFooterEnabled) },
                 onFavoritesClick = { showFavoritesPopup = true },
                 onUpdateBadgeClick = onOpenUpdatesDialog,
                 onRefreshClick = onRefresh,
@@ -458,7 +464,16 @@ fun HomeScreen(
                                     ) {
                                         val isMultiColorTheme = ThemePalettes.isMultiColorTheme(uiState.appSettings.accentColor)
                                         val isAnimationActive = isMultiColorTheme && uiState.appSettings.cardAnimationEnabled && uiState.currentPage == 1
-                                        val multiThemeGradients = if (isMultiColorTheme) ThemePalettes.getGradientColors(uiState.appSettings.accentColor) else emptyList()
+                                        val multiThemeGradients = if (isMultiColorTheme) {
+                                            ThemePalettes.getGradientColors(uiState.appSettings.accentColor)
+                                        } else {
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.secondary,
+                                                NexusGold,
+                                                MaterialTheme.colorScheme.primary
+                                            )
+                                        }
 
                                         val chunkedPairs = paginatedList.chunked(2)
                                         for ((rowIndex, pair) in chunkedPairs.withIndex()) {
@@ -566,6 +581,7 @@ fun HomeScreen(
                             onUpdateBackgroundStyle = onUpdateBackgroundStyle,
                             onUpdateAccentColor = onUpdateAccentColor,
                             onUpdateCardAnimationEnabled = onUpdateCardAnimationEnabled,
+                            onUpdateCosmicSpaceFooterEnabled = onUpdateCosmicSpaceFooterEnabled,
                             onUpdatePreventChapterCache = onUpdatePreventChapterCache,
                             onDeleteAllDownloads = onDeleteAllDownloads,
                             onOpenAuthDialog = onOpenAuthDialog,
@@ -581,15 +597,28 @@ fun HomeScreen(
         }
     }
 
-        // Modern Bottom Navigation Footer Bar
-        NexusBottomFooterBar(
-            selectedTab = uiState.selectedTab,
-            favoritesCount = uiState.favorites.size,
-            downloadedCount = uiState.downloadedChapters.size,
-            hasUpdate = uiState.updateInfo.updateAvailable,
-            onTabSelected = onTabSelected,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        // Modern Bottom Navigation Footer Bar with Cosmic Space Footer Aura Layer
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        ) {
+            com.example.ui.components.CosmicSpaceFooterAura(
+                enabled = isCosmicAuraActive,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+            )
+
+            NexusBottomFooterBar(
+                selectedTab = uiState.selectedTab,
+                favoritesCount = uiState.favorites.size,
+                downloadedCount = uiState.downloadedChapters.size,
+                hasUpdate = uiState.updateInfo.updateAvailable,
+                onTabSelected = onTabSelected,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         // Preload / Splash Loading Screen Overlay
         AnimatedVisibility(
@@ -698,6 +727,10 @@ fun NexusHomeTopBar(
     isRefreshing: Boolean = false,
     currentUser: NexusUser? = null,
     isCloudSyncing: Boolean = false,
+    totalReadChapters: Int = 0,
+    isCosmicUnlocked: Boolean = false,
+    isCosmicActive: Boolean = false,
+    onToggleCosmicAura: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
     onUpdateBadgeClick: () -> Unit = {},
     onRefreshClick: () -> Unit = {},
@@ -885,6 +918,37 @@ fun NexusHomeTopBar(
                                 fontSize = 10.sp
                             )
                         )
+                    }
+                }
+            }
+
+            // 🌌 Cosmic Space Header Aura Indicator / Toggle
+            if (isCosmicUnlocked) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isCosmicActive) Color(0xFF1E1038) else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.2.dp, if (isCosmicActive) Color(0xFFB388FF) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { onToggleCosmicAura() }
+                        .testTag("topbar_cosmic_space_toggle")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(
+                            text = "🌌",
+                            fontSize = 11.sp
+                        )
+                        if (isCosmicActive) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF7C4DFF),
+                                modifier = Modifier.size(5.dp)
+                            ) {}
+                        }
                     }
                 }
             }
@@ -1302,122 +1366,61 @@ fun LatestMangaGridCard(
 ) {
     val isAnimatedMode = isTopAnimated && gradientColors.size >= 2
 
-    // 🌊 Full-Card Infinite Smooth Transitions for ripples & ambient color wave (runs constantly 24/7 without requiring user scrolling)
-    val infiniteTransition = rememberInfiniteTransition(label = "top_card_full_animation")
+    // 🌊 Clean, refined smooth animated rotating glowing border gradient for top items
+    val infiniteTransition = rememberInfiniteTransition(label = "top_card_clean_animation")
 
-    // 1. Continuous revolving wave angle for omnidirectional liquid color flow (0 -> 360 degrees)
     val continuousWaveAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4600, easing = LinearEasing),
+            animation = tween(durationMillis = 5000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "continuous_wave_angle"
+        label = "clean_wave_angle"
     )
 
-    // 2. Continuous sweeping luminous ripple beam across the entire card surface (0 -> 1)
-    val rippleBeamProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0.95f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ripple_beam_progress"
-    )
-
-    // 3. Gentle breathing pulse for luminous gradient depth and saturation
-    val pulseGlowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.16f,
-        targetValue = 0.34f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulse_glow_alpha"
+        label = "glow_alpha"
     )
 
-    val baseSurfaceColor = MaterialTheme.colorScheme.surface
-
-    // Border Brush
+    // Sleek border brush
     val cardBorderBrush = if (isAnimatedMode) {
         val rad = Math.toRadians(continuousWaveAngle.toDouble())
         val cosA = cos(rad).toFloat()
         val sinA = sin(rad).toFloat()
-        val cx = 250f
-        val cy = 350f
+        val cx = 200f
+        val cy = 300f
         Brush.linearGradient(
-            colors = gradientColors + gradientColors.first(),
-            start = Offset(cx + cosA * 250f, cy + sinA * 250f),
-            end = Offset(cx - cosA * 250f, cy - sinA * 250f)
+            colors = listOf(
+                gradientColors[0].copy(alpha = glowAlpha),
+                gradientColors.getOrElse(1) { gradientColors[0] }.copy(alpha = glowAlpha),
+                (gradientColors.getOrNull(2) ?: gradientColors[0]).copy(alpha = glowAlpha * 0.7f),
+                gradientColors[0].copy(alpha = glowAlpha)
+            ),
+            start = Offset(cx + cosA * 220f, cy + sinA * 220f),
+            end = Offset(cx - cosA * 220f, cy - sinA * 220f)
         )
     } else {
         Brush.verticalGradient(
             listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
             )
         )
     }
 
-    val borderWidth = if (isAnimatedMode) 2.dp else 1.2.dp
+    val borderWidth = if (isAnimatedMode) 1.8.dp else 1.dp
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .then(
-                if (isAnimatedMode) {
-                    Modifier.drawBehind {
-                        // 1. Base card surface
-                        drawRect(color = baseSurfaceColor)
-
-                        // 2. Full-Card continuous ambient color wave flowing across the entire body of the card
-                        val rad = Math.toRadians(continuousWaveAngle.toDouble())
-                        val cosA = cos(rad).toFloat()
-                        val sinA = sin(rad).toFloat()
-                        val cx = size.width * 0.5f
-                        val cy = size.height * 0.5f
-                        val startWave = Offset(cx + cosA * cx * 1.1f, cy + sinA * cy * 1.1f)
-                        val endWave = Offset(cx - cosA * cx * 1.1f, cy - sinA * cy * 1.1f)
-
-                        val wavePalette = gradientColors.map { it.copy(alpha = pulseGlowAlpha) } +
-                            listOf(gradientColors.first().copy(alpha = pulseGlowAlpha * 0.75f))
-
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = wavePalette,
-                                start = startWave,
-                                end = endWave
-                            )
-                        )
-
-                        // 3. Diagonal continuous luminous ripple wave sweeping across the entire card
-                        val totalDist = size.width + size.height
-                        val beamWidth = size.width * 0.85f
-                        val beamPos = (rippleBeamProgress * (totalDist + beamWidth)) - beamWidth
-
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    gradientColors[0].copy(alpha = pulseGlowAlpha * 0.4f),
-                                    (gradientColors.getOrNull(1) ?: gradientColors[0]).copy(alpha = pulseGlowAlpha * 0.95f),
-                                    Color.White.copy(alpha = pulseGlowAlpha * 0.65f),
-                                    (gradientColors.getOrNull(2) ?: gradientColors[0]).copy(alpha = pulseGlowAlpha * 0.75f),
-                                    Color.Transparent
-                                ),
-                                start = Offset(beamPos, beamPos * 0.8f),
-                                end = Offset(beamPos + beamWidth, (beamPos + beamWidth) * 0.8f)
-                            )
-                        )
-                    }
-                } else {
-                    Modifier
-                }
-            )
             .border(
                 borderWidth,
                 cardBorderBrush,
@@ -1425,10 +1428,10 @@ fun LatestMangaGridCard(
             )
             .testTag("manga_grid_card_${manga.id}"),
         colors = CardDefaults.cardColors(
-            containerColor = if (isAnimatedMode) Color.Transparent else MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isAnimatedMode) 6.dp else 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isAnimatedMode) 4.dp else 1.5.dp)
     ) {
         Column(
             modifier = Modifier
@@ -1475,38 +1478,10 @@ fun LatestMangaGridCard(
                     .fillMaxWidth()
                     .aspectRatio(0.72f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                    .then(
-                        if (isAnimatedMode) {
-                            val rad = Math.toRadians((continuousWaveAngle + 90f).toDouble())
-                            val cosA = cos(rad).toFloat()
-                            val sinA = sin(rad).toFloat()
-                            Modifier.border(
-                                1.dp,
-                                Brush.linearGradient(
-                                    colors = listOf(
-                                        gradientColors[0].copy(alpha = 0.65f),
-                                        (gradientColors.getOrNull(1) ?: gradientColors[0]).copy(alpha = 0.35f),
-                                        gradientColors.last().copy(alpha = 0.65f)
-                                    ),
-                                    start = Offset(150f + cosA * 150f, 200f + sinA * 200f),
-                                    end = Offset(150f - cosA * 150f, 200f - sinA * 200f)
-                                ),
-                                RoundedCornerShape(10.dp)
-                            )
-                        } else Modifier
-                    )
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                     .clickable { onMangaClick() }
                     .testTag("cover_image_${manga.id}")
             ) {
-                // Mystical flame aura background for the work cover box
-                Image(
-                    painter = painterResource(id = R.drawable.img_boxcover_bg),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
                 NexusMangaImage(
                     imageUrl = manga.coverUrl,
                     fallbackRes = manga.coverRes,
@@ -1528,8 +1503,7 @@ fun LatestMangaGridCard(
                     LatestChapterItemRow(
                         chapter = chapter,
                         onChapterClick = { onChapterClick(chapter.number) },
-                        isCardAnimated = isAnimatedMode,
-                        accentColor = gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.primary
+                        gradientColors = gradientColors
                     )
                 }
             }
@@ -1538,41 +1512,96 @@ fun LatestMangaGridCard(
 }
 
 /**
- * Individual Chapter row under the manga cover with "NEW" badge
+ * Individual Chapter row under the manga cover with glowing animated border for "NEW" chapters
  */
 @Composable
 fun LatestChapterItemRow(
     chapter: Chapter,
     onChapterClick: () -> Unit,
-    isCardAnimated: Boolean = false,
-    accentColor: Color = MaterialTheme.colorScheme.primary
+    gradientColors: List<Color> = emptyList()
 ) {
-    val rowSurfaceColor = if (isCardAnimated) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.58f)
+    val isNew = com.example.util.ChapterDateUtils.isChapterNew(chapter.releaseDate, chapter.isNew)
+    val effectiveGradients = if (gradientColors.size >= 2) {
+        gradientColors
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        listOf(
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.secondary,
+            NexusGold,
+            MaterialTheme.colorScheme.primary
+        )
     }
 
-    val rowBorder = if (isCardAnimated) {
-        BorderStroke(0.6.dp, accentColor.copy(alpha = 0.35f))
+    // 🌊 Smooth rotating wave and breathing glow for NEW chapters on ALL works
+    val infiniteTransition = rememberInfiniteTransition(label = "chapter_new_anim")
+
+    val continuousWaveAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "chapter_new_wave_angle"
+    )
+
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "chapter_new_glow_alpha"
+    )
+
+    val rowBorderBrush = if (isNew) {
+        val rad = Math.toRadians(continuousWaveAngle.toDouble())
+        val cosA = cos(rad).toFloat()
+        val sinA = sin(rad).toFloat()
+        val cx = 160f
+        val cy = 40f
+        Brush.linearGradient(
+            colors = listOf(
+                effectiveGradients[0].copy(alpha = glowAlpha),
+                effectiveGradients.getOrElse(1) { effectiveGradients[0] }.copy(alpha = glowAlpha),
+                (effectiveGradients.getOrNull(2) ?: effectiveGradients[0]).copy(alpha = glowAlpha * 0.75f),
+                effectiveGradients[0].copy(alpha = glowAlpha)
+            ),
+            start = Offset(cx + cosA * 140f, cy + sinA * 140f),
+            end = Offset(cx - cosA * 140f, cy - sinA * 140f)
+        )
     } else {
-        BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+        Brush.linearGradient(
+            listOf(
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+            )
+        )
     }
+
+    val rowSurfaceColor = if (isNew) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+
+    val borderWidth = if (isNew) 1.2.dp else 0.6.dp
 
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(7.dp),
         color = rowSurfaceColor,
-        border = rowBorder,
+        border = BorderStroke(borderWidth, rowBorderBrush),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(7.dp))
             .clickable { onChapterClick() }
             .testTag("chapter_item_${chapter.mangaId}_${chapter.number}")
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 5.dp),
+                .padding(horizontal = 7.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1584,7 +1613,7 @@ fun LatestChapterItemRow(
                 Text(
                     text = "فصل ${chapter.number}",
                     style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = if (isNew) FontWeight.Black else FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 11.sp
                     ),
@@ -1594,7 +1623,7 @@ fun LatestChapterItemRow(
             }
 
             // "NEW" / "جديد" Radiant Badge (only shown if under 3 days old and adapts to theme)
-            if (com.example.util.ChapterDateUtils.isChapterNew(chapter.releaseDate, chapter.isNew)) {
+            if (isNew) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.primary,

@@ -72,6 +72,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -344,6 +345,16 @@ fun ReaderScreen(
                 }
         ) {
             val readerMode = uiState.appSettings.readerMode
+            // 🚀 طابور تحميل الصور بالتسلسل صورة صورة من الأعلى إلى الأسفل لمنع اللاج وتسريع القراءة
+            var maxAllowedLoadIndex by remember(chapter.number) { mutableIntStateOf(0) }
+
+            // تحديث الطابور فور تمرير المستخدم لأي صفحة متقدمة
+            LaunchedEffect(listState.firstVisibleItemIndex) {
+                if (listState.firstVisibleItemIndex > maxAllowedLoadIndex) {
+                    maxAllowedLoadIndex = listState.firstVisibleItemIndex
+                }
+            }
+
             if (readerMode == 1 || readerMode == 2) {
                 // 📖 نمط القراءة الأفقي (تقليب الصفحات يميناً أو يساراً)
                 val pagerState = rememberPagerState(
@@ -375,7 +386,9 @@ fun ReaderScreen(
                                 totalPages = totalPages,
                                 isDownloaded = uiState.isDownloaded,
                                 imageQuality = uiState.appSettings.imageQuality,
-                                watermarkData = pageWatermark
+                                watermarkData = pageWatermark,
+                                shouldLoad = true,
+                                onLoadFinished = {}
                             )
                         }
                     }
@@ -401,6 +414,7 @@ fun ReaderScreen(
                     ) { index, page ->
                         val pNum = page.pageNumber.takeIf { it > 0 } ?: (index + 1)
                         val pageWatermark = uiState.coordinates?.getPageData(pNum)
+                        val shouldLoad = index <= maxAllowedLoadIndex
                         ComicPageItem(
                             imageUrl = page.imageUrl,
                             pageRes = page.imageRes,
@@ -408,7 +422,13 @@ fun ReaderScreen(
                             totalPages = totalPages,
                             isDownloaded = uiState.isDownloaded,
                             imageQuality = uiState.appSettings.imageQuality,
-                            watermarkData = pageWatermark
+                            watermarkData = pageWatermark,
+                            shouldLoad = shouldLoad,
+                            onLoadFinished = {
+                                if (index >= maxAllowedLoadIndex) {
+                                    maxAllowedLoadIndex = index + 1
+                                }
+                            }
                         )
 
                         // Fixed Start.io Banner Ad between each comic page and the next
@@ -915,22 +935,30 @@ fun ComicPageItem(
     totalPages: Int,
     isDownloaded: Boolean = false,
     imageQuality: Int = 0,
-    watermarkData: PageWatermarkData? = null
+    watermarkData: PageWatermarkData? = null,
+    shouldLoad: Boolean = true,
+    onLoadFinished: () -> Unit = {}
 ) {
     var reloadKey by remember(imageUrl) { mutableIntStateOf(0) }
     var isLoaded by remember(imageUrl, reloadKey) { mutableStateOf(false) }
     var isError by remember(imageUrl, reloadKey) { mutableStateOf(false) }
-    var isTimeout by remember(imageUrl, reloadKey) { mutableStateOf(false) }
     var imageSize by remember(imageUrl, reloadKey) { mutableStateOf(IntSize.Zero) }
 
-    LaunchedEffect(imageUrl, reloadKey) {
-        if (!imageUrl.isNullOrBlank()) {
-            isLoaded = false
-            isError = false
-            isTimeout = false
-            delay(5000L)
-            if (!isLoaded) {
-                isTimeout = true
+    // Estimated total MB size for the page (between 3.0MB and 5.0MB)
+    val targetTotalMb = remember(pageNumber) {
+        3.2f + ((pageNumber * 7) % 4) * 0.45f
+    }
+    var currentProgressMb by remember(imageUrl, reloadKey) { mutableFloatStateOf(0.0f) }
+
+    // Live progress simulation ticker while loading
+    LaunchedEffect(shouldLoad, isLoaded, isError, reloadKey) {
+        if (shouldLoad && !isLoaded && !isError && !imageUrl.isNullOrBlank()) {
+            currentProgressMb = 0.0f
+            val stepTime = 70L
+            val stepIncrement = targetTotalMb / 22f
+            while (!isLoaded && !isError && currentProgressMb < targetTotalMb * 0.94f) {
+                delay(stepTime)
+                currentProgressMb = (currentProgressMb + stepIncrement).coerceAtMost(targetTotalMb * 0.96f)
             }
         }
     }
@@ -942,39 +970,43 @@ fun ComicPageItem(
         contentAlignment = Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
-            key(reloadKey) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        // 🚀 منع التطبيق من إدخال الفصول في الكاش الثابت للقرص:
-                        .diskCachePolicy(if (isDownloaded) CachePolicy.ENABLED else CachePolicy.DISABLED)
-                        .networkCachePolicy(CachePolicy.ENABLED)
-                        .apply {
-                            if (imageQuality == 2) {
-                                bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
-                            } else if (imageQuality == 0) {
-                                bitmapConfig(android.graphics.Bitmap.Config.ARGB_8888)
+            if (shouldLoad) {
+                key(reloadKey) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            // 🚀 منع التطبيق من إدخال الفصول في الكاش الثابت للقرص:
+                            .diskCachePolicy(if (isDownloaded) CachePolicy.ENABLED else CachePolicy.DISABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .apply {
+                                if (imageQuality == 2) {
+                                    bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
+                                } else if (imageQuality == 0) {
+                                    bitmapConfig(android.graphics.Bitmap.Config.ARGB_8888)
+                                }
                             }
-                        }
-                        .listener(
-                            onSuccess = { _, _ ->
-                                isLoaded = true
-                                isError = false
-                                isTimeout = false
-                            },
-                            onError = { _, _ ->
-                                isError = true
-                            }
-                        )
-                        .build(),
-                    contentDescription = "صفحة $pageNumber من $totalPages",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onSizeChanged { imageSize = it }
-                )
+                            .listener(
+                                onSuccess = { _, _ ->
+                                    currentProgressMb = targetTotalMb
+                                    isLoaded = true
+                                    isError = false
+                                    onLoadFinished()
+                                },
+                                onError = { _, _ ->
+                                    isError = true
+                                    onLoadFinished()
+                                }
+                            )
+                            .build(),
+                        contentDescription = "صفحة $pageNumber من $totalPages",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { imageSize = it }
+                    )
+                }
             }
 
             // 🎯 Smart Watermark Clean Overlays (White box + "تطبيق Nexus")
@@ -1016,8 +1048,118 @@ fun ComicPageItem(
                 }
             }
 
-            // If image fails to load or exceeds 5 seconds, show retry card
-            if ((isTimeout || isError) && !isLoaded) {
+            // 📊 Live Loading Card with Dynamic MB Counter & Sequential Queue Indicator
+            if (!isLoaded && !isError) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        if (!shouldLoad) {
+                            // Waiting in queue
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(52.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.FormatListNumbered,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "الصفحة $pageNumber في طابور التحميل...",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+
+                            Text(
+                                text = "يتم تحميل الصفحات بالتسلسل من الأعلى للأسفل لتفادي اللاج",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        } else {
+                            // Actively Downloading with live MB and progress bar
+                            CircularProgressIndicator(
+                                strokeWidth = 3.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(44.dp)
+                            )
+
+                            Text(
+                                text = "جاري تحميل الصفحة $pageNumber من $totalPages...",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+
+                            // 📊 Live MB Progress Counter: "5.0MB / 0.0MB"
+                            val currentFormatted = String.format(java.util.Locale.US, "%.1f", currentProgressMb)
+                            val totalFormatted = String.format(java.util.Locale.US, "%.1f", targetTotalMb)
+                            val progressRatio = (currentProgressMb / targetTotalMb).coerceIn(0.05f, 0.98f)
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.75f)
+                                    .padding(top = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = { progressRatio },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "${(progressRatio * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                    Text(
+                                        text = "${totalFormatted}MB / ${currentFormatted}MB",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Error Retry Card (Only on actual network failure)
+            if (isError && !isLoaded) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1046,7 +1188,7 @@ fun ComicPageItem(
                         }
 
                         Text(
-                            text = if (isError) "تعذر تحميل الصفحة $pageNumber" else "استغرق تحميل الصفحة $pageNumber أكثر من 5 ثوانٍ",
+                            text = "تعذر تحميل الصفحة $pageNumber",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1067,7 +1209,6 @@ fun ComicPageItem(
                             onClick = {
                                 isLoaded = false
                                 isError = false
-                                isTimeout = false
                                 reloadKey++
                             },
                             colors = ButtonDefaults.buttonColors(

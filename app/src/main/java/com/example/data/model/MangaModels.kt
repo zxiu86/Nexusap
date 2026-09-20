@@ -65,6 +65,9 @@ data class MangaItem(
 ) {
     val latestThreeChapters: List<Chapter>
         get() = chapters.sortedByDescending { it.number }.take(3)
+
+    val hasNewChapter: Boolean
+        get() = latestThreeChapters.any { com.example.util.ChapterDateUtils.isChapterNew(it.releaseDate, it.isNew) }
 }
 
 // ----------------------------------------------------

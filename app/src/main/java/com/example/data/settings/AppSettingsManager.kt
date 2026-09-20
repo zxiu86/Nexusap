@@ -19,7 +19,8 @@ data class AppSettings(
     val backgroundStyle: Int = 0, // 0: Default, 1: AMOLED Pure Black, 2: Pure White
     val accentColor: Int = 0, // 0..7: Solid, 10..15: Multi-Color Gradients
     val preventChapterCache: Boolean = true, // Don't persist chapter images in disk cache, auto-clear on exit
-    val cardAnimationEnabled: Boolean = true // Enable animated gradient aura for the top 2 newest works in multi-color themes
+    val cardAnimationEnabled: Boolean = true, // Enable animated gradient aura for the top 2 newest works in multi-color themes
+    val cosmicSpaceFooterEnabled: Boolean = true // Legendary Cosmic Space Footer Aura (unlocked at 500 chapters or admin)
 )
 
 class AppSettingsManager private constructor(context: Context) {
@@ -39,7 +40,8 @@ class AppSettingsManager private constructor(context: Context) {
             backgroundStyle = prefs.getInt(KEY_BACKGROUND_STYLE, 0),
             accentColor = prefs.getInt(KEY_ACCENT_COLOR, 0),
             preventChapterCache = prefs.getBoolean(KEY_PREVENT_CHAPTER_CACHE, true),
-            cardAnimationEnabled = prefs.getBoolean(KEY_CARD_ANIMATION_ENABLED, true)
+            cardAnimationEnabled = prefs.getBoolean(KEY_CARD_ANIMATION_ENABLED, true),
+            cosmicSpaceFooterEnabled = prefs.getBoolean(KEY_COSMIC_SPACE_FOOTER_ENABLED, prefs.getBoolean("pref_cosmic_space_header_enabled", true))
         )
     }
 
@@ -93,6 +95,11 @@ class AppSettingsManager private constructor(context: Context) {
         _settingsFlow.value = _settingsFlow.value.copy(cardAnimationEnabled = enabled)
     }
 
+    fun updateCosmicSpaceFooterEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_COSMIC_SPACE_FOOTER_ENABLED, enabled).apply()
+        _settingsFlow.value = _settingsFlow.value.copy(cosmicSpaceFooterEnabled = enabled)
+    }
+
     fun getCalculatedCacheSize(context: Context): String {
         val bytes = calculateDirSize(context.cacheDir) + calculateDirSize(context.externalCacheDir)
         val mb = bytes.toDouble() / (1024 * 1024)
@@ -144,6 +151,7 @@ class AppSettingsManager private constructor(context: Context) {
         private const val KEY_ACCENT_COLOR = "pref_accent_color"
         private const val KEY_PREVENT_CHAPTER_CACHE = "pref_prevent_chapter_cache"
         private const val KEY_CARD_ANIMATION_ENABLED = "pref_card_animation_enabled"
+        private const val KEY_COSMIC_SPACE_FOOTER_ENABLED = "pref_cosmic_space_footer_enabled"
 
         @Volatile
         private var INSTANCE: AppSettingsManager? = null

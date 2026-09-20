@@ -166,6 +166,9 @@ fun NexusNavGraph(
                     onUpdateCardAnimationEnabled = { enabled ->
                         viewModel.updateCardAnimationEnabled(enabled)
                     },
+                    onUpdateCosmicSpaceFooterEnabled = { enabled ->
+                        viewModel.updateCosmicSpaceFooterEnabled(enabled)
+                    },
                     onUpdatePreventChapterCache = { prevent ->
                         viewModel.updatePreventChapterCache(prevent)
                     },

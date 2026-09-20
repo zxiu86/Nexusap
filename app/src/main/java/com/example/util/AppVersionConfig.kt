@@ -7,8 +7,8 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.0"
-    const val VERSION_CODE = 40
+    const val VERSION_NAME = "2.0.2"
+    const val VERSION_CODE = 42
     const val BUILD_CODENAME = "Nexus Titan"
     const val RELEASE_CHANNEL = "النسخة الرسمية المستقرة"
     const val RELEASE_DATE = "سبتمبر 2026"

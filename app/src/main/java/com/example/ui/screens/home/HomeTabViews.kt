@@ -685,7 +685,7 @@ fun FavoritesTabContent(
                                 )
 
                                  // New Chapter Notification Badge on Favorites (only if it has recent new chapters)
-                                val hasRecentChapter = manga.chapters.any { com.example.util.ChapterDateUtils.isChapterNew(it.releaseDate, it.isNew) }
+                                val hasRecentChapter = manga.hasNewChapter
                                 if (isFavoritesTab && hasRecentChapter) {
                                     Surface(
                                         shape = RoundedCornerShape(bottomStart = 8.dp),
@@ -2495,6 +2495,7 @@ fun SettingsTabContent(
     onUpdateBackgroundStyle: (Int) -> Unit = {},
     onUpdateAccentColor: (Int) -> Unit = {},
     onUpdateCardAnimationEnabled: (Boolean) -> Unit = {},
+    onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit = {},
     onDeleteAllDownloads: () -> Unit = {},
     onOpenAuthDialog: () -> Unit = {},
@@ -2521,6 +2522,7 @@ fun SettingsTabContent(
     val backgroundStyle = appSettings.backgroundStyle
     val accentColor = appSettings.accentColor
     val cardAnimationEnabled = appSettings.cardAnimationEnabled
+    val cosmicSpaceFooterEnabled = appSettings.cosmicSpaceFooterEnabled
     val preventChapterCache = appSettings.preventChapterCache
 
     val currentThemePreset = ThemePalettes.getPresetById(accentColor)
@@ -3557,6 +3559,130 @@ fun SettingsTabContent(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = accentPrimary
+                            )
+                        )
+                    }
+
+                    // 🌌 شريط تقدم الفضاء الأسطوري (500 فصل مقروء)
+                    val totalReadChapters = uiState.totalReadChaptersCount
+                    val isCosmicUnlocked = uiState.isCosmicAuraUnlocked
+                    val progressRatio = (totalReadChapters / 500f).coerceIn(0f, 1f)
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 0.6.dp
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isCosmicUnlocked) Color(0xFF0F0B1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .border(
+                                1.dp,
+                                if (isCosmicUnlocked) Color(0xFF7C4DFF).copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                RoundedCornerShape(14.dp)
+                            )
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "🌌",
+                                    fontSize = 18.sp
+                                )
+                                Column {
+                                    Text(
+                                        text = "المظهر الأسطوري: فضاء الفوتر الكوني",
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCosmicUnlocked) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 13.5.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = if (uiState.currentUser?.isAdmin == true) {
+                                            "مفتوح تلقائياً للمشرف 👑"
+                                        } else if (totalReadChapters >= 500) {
+                                            "تم فتح المظهر الأسطوري بنجاح! ✨"
+                                        } else {
+                                            "يتطلب قراءة 500 فصل لفتحه (أو للمشرف)"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (isCosmicUnlocked) Color(0xFFB388FF) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = cosmicSpaceFooterEnabled && isCosmicUnlocked,
+                                onCheckedChange = { if (isCosmicUnlocked) onUpdateCosmicSpaceFooterEnabled(it) },
+                                enabled = isCosmicUnlocked,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Color(0xFF7C4DFF),
+                                    disabledCheckedTrackColor = Color(0xFF7C4DFF).copy(alpha = 0.4f)
+                                )
+                            )
+                        }
+
+                        // 500 Chapters Progress Bar
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "التقدم نحو الفضاء الأسطوري:",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = if (isCosmicUnlocked) Color(0xFFE0E0E0) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                                Text(
+                                    text = "$totalReadChapters / 500 فصل (${(progressRatio * 100).toInt()}%)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isCosmicUnlocked) Color(0xFF80D8FF) else MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+
+                            LinearProgressIndicator(
+                                progress = { progressRatio },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(7.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = if (isCosmicUnlocked) Color(0xFF7C4DFF) else MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            )
+                        }
+
+                        Text(
+                            text = "تصميم فضاء أسطوري ينطلق من خلف شريط الفوتر السفلي كظل أسود ناعم يتنفس بنعومة نحو الأعلى مع نجوم متوهجة تتحرك وتتلاشى بسلاسة تامة بدون أي حواف حادة.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isCosmicUnlocked) Color(0xFFB0BEC5) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.5.sp,
+                                lineHeight = 15.sp
                             )
                         )
                     }
