@@ -562,8 +562,8 @@ fun HomeScreen(
                         )
                     }
                     4 -> {
-                        // Settings Tab Content (Downloads, Updates, Cache & Info)
-                        SettingsTabContent(
+                        // Modern Settings Sub-Pages Architecture (v2.0.3 SUPER)
+                        SettingsModernContainer(
                             uiState = uiState,
                             onReadChapter = { mangaId, chNum -> onChapterClick(mangaId, chNum) },
                             onDeleteDownload = onDeleteDownloadedChapter,

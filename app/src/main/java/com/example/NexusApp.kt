@@ -36,8 +36,8 @@ class NexusApp : Application(), ImageLoaderFactory {
             StartAppSDK.setUserConsent(this, "coppa", System.currentTimeMillis(), true)
             StartAppAd.disableSplash()
             Log.d("NexusApp", "Start.io Ads SDK initialized with App ID: $STARTAPP_APP_ID")
-        } catch (e: Exception) {
-            Log.w("NexusApp", "Failed to init StartApp SDK: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w("NexusApp", "Failed to init StartApp SDK: ${t.message}")
         }
     }
 

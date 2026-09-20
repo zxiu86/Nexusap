@@ -8,14 +8,14 @@ class GitHubSyncUnitTest {
 
     @Test
     fun testGitHubDefaultConfig() {
-        assertEquals("zxiu86", GitHubNetworkModule.DEFAULT_REPO_OWNER)
-        assertEquals("Data", GitHubNetworkModule.DEFAULT_REPO_NAME)
+        assertEquals("zxiu86", GitHubNetworkModule.DEFAULT_OWNER)
+        assertEquals("Data", GitHubNetworkModule.DEFAULT_DATA_REPO)
         assertEquals("main", GitHubNetworkModule.DEFAULT_BRANCH)
     }
 
     @Test
-    fun testVersionMatches201() {
-        assertEquals("2.0.1", com.example.util.AppVersionConfig.VERSION_NAME)
-        assertEquals(201, com.example.util.AppVersionConfig.VERSION_CODE)
+    fun testVersionMatches203() {
+        assertEquals("2.0.3", com.example.util.AppVersionConfig.VERSION_NAME)
+        assertEquals(43, com.example.util.AppVersionConfig.VERSION_CODE)
     }
 }
