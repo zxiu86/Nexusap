@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.3"
-    const val VERSION_CODE = 43
+    const val VERSION_NAME = "2.0.4"
+    const val VERSION_CODE = 44
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.3 SUPER"
+     * Short version string: "v2.0.4 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 43"
+     * Build identifier: "Build 44"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.3 SUPER (Build 43) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.4 SUPER (Build 44) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,11 +55,11 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "تقسيم صفحة الإعدادات بالكامل إلى صفحات فرعية وتصنيفات داخلية عصرية وفاخرة عالمياً لتجربة تحكم سلسة وفائقة السرعة.",
-        "نقل تصميم الفضاء الأسطوري المتوهج إلى خلف شريط الفوتر السفلي ليتنفس ويصعد للأعلى دون التأثير على وضوح وتفاعل الفوتر.",
-        "إطلاق الإصدار الخارق 2.0.3 SUPER مع تحسينات أداء شاملة وسرعة استجابة فائقة في التصفح والقراءة.",
-        "نظام البلاغات وطلبات الأعمال والميزات الشامل مع إمكانية التخزين المؤقت الذكي وخيار الإرسال الفوري والمزامنة السحابية.",
-        "لوحة إدارة وتحكم المشرفين لمراجعة البلاغات والطلبات مع أزرار الموافقة والرفض المباشرة والإشعارات الفورية.",
-        "باقة من تدرجات الألوان التجميلية الساحرة (الشفق، الغروب، سايبربانك، أمواج المحيط، لهب التنين، سديم الفضاء) وشريط تقدم 500 فصل."
+        "تكيّف ديناميكي كامل وتلقائي لنافذة تسجيل الدخول/إنشاء الحساب مع الثيم والألوان التجميلية المختارة في الإعدادات.",
+        "أنيميشن تموج سريع وانسيابي على شريط الفوتر السفلي يظهر ويختفي دورياً كل 3 ثوانٍ متناغماً مع الألوان التجميلية للمستخدم.",
+        "تبسيط وتجميل الهيدر العلوي بإزالة زر إعادة التحميل مع الإبقاء التام على ميزة السحب للأسفل للتحديث (Pull-to-Refresh).",
+        "ترقية إصدار التطبيق إلى 2.0.4 SUPER مع تحسينات في استقرار الواجهة والأداء وسرعة الاستجابة.",
+        "تقسيم صفحة الإعدادات بالكامل إلى صفحات فرعية وتصنيفات داخلية عصرية وفاخرة عالمياً لتجربة تحكم سلسة.",
+        "لوحة إدارة وتحكم المشرفين لمراجعة البلاغات والطلبات مع المزامنة السحابية وباقة الألوان التجميلية المتنوعة."
     )
 }

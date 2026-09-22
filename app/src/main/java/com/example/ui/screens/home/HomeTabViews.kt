@@ -5,9 +5,21 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.sin
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -201,11 +213,58 @@ fun NexusBottomFooterBar(
     favoritesCount: Int,
     downloadedCount: Int = 0,
     hasUpdate: Boolean,
+    accentColor: Int = 0,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accentPrimary = MaterialTheme.colorScheme.primary
     val accentSecondary = MaterialTheme.colorScheme.secondary
+
+    // Resolve cosmetic palette selected by user in settings
+    val preset = remember(accentColor) { ThemePalettes.getPresetById(accentColor) }
+    val cosmeticColors = remember(preset) {
+        if (preset.gradientColors.size > 1) {
+            preset.gradientColors
+        } else {
+            listOf(preset.primaryColor, preset.secondaryColor, preset.primaryColor)
+        }
+    }
+
+    // Fast Ripple Wave Animation:
+    // Wave sweeps fast across footer in 1200ms, then disappears completely for 3000ms (3 full seconds), then sweeps again!
+    val infiniteTransition = rememberInfiniteTransition(label = "footer_wave_cycle_transition")
+
+    val waveProgress by infiniteTransition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 4200
+                -0.35f at 0 using FastOutSlowInEasing
+                1.35f at 1200
+                1.35f at 4200 // Dormant during the 3 seconds pause
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "footer_wave_progress"
+    )
+
+    val waveAlpha by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 4200
+                0.0f at 0
+                0.90f at 160
+                0.90f at 1040
+                0.0f at 1200 // Completely disappears!
+                0.0f at 4200 // Remains hidden for 3000ms (3 seconds)
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "footer_wave_alpha"
+    )
 
     Box(
         modifier = modifier
@@ -231,58 +290,131 @@ fun NexusBottomFooterBar(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FooterNavItem(
-                    icon = Icons.Default.Explore,
-                    label = "الرئيسية",
-                    isSelected = selectedTab == 0,
-                    badgeCount = null,
-                    onClick = { onTabSelected(0) },
-                    testTag = "footer_tab_home"
-                )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                // 🌊 Fast cosmetic ripple wave layer (تموج تجميلي سريع يظهر ثم يختفي 3 ثوانٍ ويعاود الظهور)
+                if (waveAlpha > 0.01f) {
+                    Canvas(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(24.dp))
+                    ) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        val centerX = canvasWidth * waveProgress
+                        val waveWidth = canvasWidth * 0.45f
 
-                FooterNavItem(
-                    icon = Icons.Default.Search,
-                    label = "البحث",
-                    isSelected = selectedTab == 1,
-                    badgeCount = null,
-                    onClick = { onTabSelected(1) },
-                    testTag = "footer_tab_search"
-                )
+                        // 1. Radiant luminous background wave wash
+                        val washBrush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                cosmeticColors.first().copy(alpha = 0.22f * waveAlpha),
+                                cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.40f * waveAlpha),
+                                cosmeticColors.last().copy(alpha = 0.22f * waveAlpha),
+                                Color.Transparent
+                            ),
+                            startX = centerX - waveWidth,
+                            endX = centerX + waveWidth
+                        )
+                        drawRect(brush = washBrush)
 
-                FooterNavItem(
-                    icon = Icons.Default.Favorite,
-                    label = "المفضلة",
-                    isSelected = selectedTab == 2,
-                    badgeCount = if (favoritesCount > 0) favoritesCount else null,
-                    badgeColor = accentPrimary,
-                    onClick = { onTabSelected(2) },
-                    testTag = "footer_tab_favorites"
-                )
+                        // 2. High-vibrance top-border shimmer crest line
+                        val crestBrush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                cosmeticColors.first().copy(alpha = 0.70f * waveAlpha),
+                                Color.White.copy(alpha = 0.90f * waveAlpha),
+                                cosmeticColors.last().copy(alpha = 0.70f * waveAlpha),
+                                Color.Transparent
+                            ),
+                            startX = centerX - waveWidth * 0.65f,
+                            endX = centerX + waveWidth * 0.65f
+                        )
+                        drawLine(
+                            brush = crestBrush,
+                            start = Offset(centerX - waveWidth * 0.65f, 1.dp.toPx()),
+                            end = Offset(centerX + waveWidth * 0.65f, 1.dp.toPx()),
+                            strokeWidth = 2.5.dp.toPx()
+                        )
 
-                FooterNavItem(
-                    icon = Icons.Default.History,
-                    label = "السجل",
-                    isSelected = selectedTab == 3,
-                    badgeCount = null,
-                    onClick = { onTabSelected(3) },
-                    testTag = "footer_tab_history"
-                )
+                        // 3. Fluid sinusoidal wave curve ripple across footer
+                        val wavePath = Path()
+                        val segments = 32
+                        val waveLength = waveWidth * 1.35f
+                        val startX = centerX - waveLength / 2
+                        val amplitude = 5.5.dp.toPx() * waveAlpha
+                        val midY = canvasHeight * 0.5f
 
-                FooterNavItem(
-                    icon = Icons.Default.Settings,
-                    label = "الإعدادات",
-                    isSelected = selectedTab == 4,
-                    hasDot = hasUpdate,
-                    onClick = { onTabSelected(4) },
-                    testTag = "footer_tab_settings"
-                )
+                        for (i in 0..segments) {
+                            val progress = i.toFloat() / segments
+                            val px = startX + progress * waveLength
+                            val py = midY + sin(progress * 2 * Math.PI.toFloat()) * amplitude
+                            if (i == 0) wavePath.moveTo(px, py) else wavePath.lineTo(px, py)
+                        }
+
+                        drawPath(
+                            path = wavePath,
+                            brush = crestBrush,
+                            style = Stroke(
+                                width = 1.8.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FooterNavItem(
+                        icon = Icons.Default.Explore,
+                        label = "الرئيسية",
+                        isSelected = selectedTab == 0,
+                        badgeCount = null,
+                        onClick = { onTabSelected(0) },
+                        testTag = "footer_tab_home"
+                    )
+
+                    FooterNavItem(
+                        icon = Icons.Default.Search,
+                        label = "البحث",
+                        isSelected = selectedTab == 1,
+                        badgeCount = null,
+                        onClick = { onTabSelected(1) },
+                        testTag = "footer_tab_search"
+                    )
+
+                    FooterNavItem(
+                        icon = Icons.Default.Favorite,
+                        label = "المفضلة",
+                        isSelected = selectedTab == 2,
+                        badgeCount = if (favoritesCount > 0) favoritesCount else null,
+                        badgeColor = accentPrimary,
+                        onClick = { onTabSelected(2) },
+                        testTag = "footer_tab_favorites"
+                    )
+
+                    FooterNavItem(
+                        icon = Icons.Default.History,
+                        label = "السجل",
+                        isSelected = selectedTab == 3,
+                        badgeCount = null,
+                        onClick = { onTabSelected(3) },
+                        testTag = "footer_tab_history"
+                    )
+
+                    FooterNavItem(
+                        icon = Icons.Default.Settings,
+                        label = "الإعدادات",
+                        isSelected = selectedTab == 4,
+                        hasDot = hasUpdate,
+                        onClick = { onTabSelected(4) },
+                        testTag = "footer_tab_settings"
+                    )
+                }
             }
         }
     }

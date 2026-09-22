@@ -77,12 +77,16 @@ import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
+import com.example.ui.theme.ThemePalettes
+import com.example.ui.theme.ThemePalettePreset
+
 @Composable
 fun AuthDialog(
     isOpen: Boolean,
     isLoading: Boolean,
     errorMessage: String?,
     successMessage: String?,
+    accentColor: Int = 0,
     onDismiss: () -> Unit,
     onSignInEmail: (String, String) -> Unit,
     onSignUpEmail: (String, String, String) -> Unit,
@@ -91,6 +95,37 @@ fun AuthDialog(
     onClearMessages: () -> Unit = {}
 ) {
     if (!isOpen) return
+
+    val preset = remember(accentColor) { ThemePalettes.getPresetById(accentColor) }
+    val primaryColor = preset.primaryColor
+    val secondaryColor = preset.secondaryColor
+    val onPrimaryColor = preset.onPrimary
+    val gradientColors = preset.gradientColors
+    val isMultiColor = preset.isMultiColor
+
+    val tabBrush = remember(preset) {
+        if (gradientColors.size > 1) {
+            Brush.horizontalGradient(gradientColors)
+        } else {
+            Brush.horizontalGradient(listOf(primaryColor, secondaryColor))
+        }
+    }
+
+    val cardBorderBrush = remember(preset) {
+        if (gradientColors.size > 1) {
+            Brush.verticalGradient(
+                gradientColors.map { it.copy(alpha = 0.75f) } + listOf(Color.White.copy(alpha = 0.08f))
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    primaryColor.copy(alpha = 0.75f),
+                    secondaryColor.copy(alpha = 0.45f),
+                    Color.White.copy(alpha = 0.06f)
+                )
+            )
+        }
+    }
 
     // 0: Sign In, 1: Sign Up
     var authMode by remember { mutableIntStateOf(0) }
@@ -118,18 +153,9 @@ fun AuthDialog(
                 .clip(RoundedCornerShape(26.dp))
                 .testTag("auth_dialog_card"),
             colors = CardDefaults.cardColors(
-                containerColor = BackgroundDark.copy(alpha = 0.98f)
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
             ),
-            border = BorderStroke(
-                1.5.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        NexusGold.copy(alpha = 0.6f),
-                        NexusOrange.copy(alpha = 0.3f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                )
-            ),
+            border = BorderStroke(1.5.dp, cardBorderBrush),
             elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
         ) {
             Column(
@@ -152,12 +178,12 @@ fun AuthDialog(
                         },
                         modifier = Modifier
                             .size(36.dp)
-                            .background(SurfaceElevated, CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "إغلاق",
-                            tint = TextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -169,14 +195,14 @@ fun AuthDialog(
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = NexusGold,
+                            tint = primaryColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = if (authMode == 0) "تسجيل الدخول" else "إنشاء حساب جديد",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -188,8 +214,8 @@ fun AuthDialog(
                 // Info banner explaining the lightweight per-user persistence
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = NexusGold.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, NexusGold.copy(alpha = 0.25f)),
+                    color = primaryColor.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -200,7 +226,7 @@ fun AuthDialog(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = NexusGold,
+                            tint = primaryColor,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -208,7 +234,7 @@ fun AuthDialog(
                             text = "تسجيل فوري وسريع لحفظ المفضلة والمشاهدة لاحقاً لكل مستخدم",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = NexusGold,
+                            color = primaryColor,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -220,12 +246,12 @@ fun AuthDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(SurfaceElevated, RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val loginBgModifier = if (authMode == 0) {
-                        Modifier.background(Brush.horizontalGradient(listOf(NexusGold, NexusOrange)))
+                        Modifier.background(tabBrush)
                     } else {
                         Modifier
                     }
@@ -244,13 +270,13 @@ fun AuthDialog(
                         Text(
                             text = "تسجيل الدخول",
                             fontWeight = if (authMode == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (authMode == 0) Color.Black else TextSecondary,
+                            color = if (authMode == 0) onPrimaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
 
                     val registerBgModifier = if (authMode == 1) {
-                        Modifier.background(Brush.horizontalGradient(listOf(NexusGold, NexusOrange)))
+                        Modifier.background(tabBrush)
                     } else {
                         Modifier
                     }
@@ -269,7 +295,7 @@ fun AuthDialog(
                         Text(
                             text = "حساب جديد",
                             fontWeight = if (authMode == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (authMode == 1) Color.Black else TextSecondary,
+                            color = if (authMode == 1) onPrimaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
@@ -358,12 +384,12 @@ fun AuthDialog(
                         value = username,
                         onValueChange = { username = it },
                         label = { Text("اسم المستخدم", fontSize = 12.sp) },
-                        placeholder = { Text("مثال: zxiuzaid أو اسمك المستعار", fontSize = 11.sp, color = TextSecondary.copy(alpha = 0.5f)) },
+                        placeholder = { Text("مثال: zxiuzaid أو اسمك المستعار", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = NexusGold
+                                tint = primaryColor
                             )
                         },
                         singleLine = true,
@@ -372,13 +398,13 @@ fun AuthDialog(
                             .fillMaxWidth()
                             .testTag("auth_username_field"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NexusGold,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                            focusedContainerColor = SurfaceElevated.copy(alpha = 0.5f),
-                            unfocusedContainerColor = SurfaceElevated.copy(alpha = 0.3f),
-                            focusedLabelColor = NexusGold,
-                            unfocusedLabelColor = TextSecondary,
-                            cursorColor = NexusGold
+                            focusedBorderColor = primaryColor,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                            focusedLabelColor = primaryColor,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            cursorColor = primaryColor
                         ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
@@ -399,7 +425,7 @@ fun AuthDialog(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = NexusGold
+                                tint = primaryColor
                             )
                         },
                         trailingIcon = {
@@ -407,7 +433,7 @@ fun AuthDialog(
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                     contentDescription = if (passwordVisible) "إخفاء كلمة المرور" else "إظهار كلمة المرور",
-                                    tint = TextSecondary
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         },
@@ -418,13 +444,13 @@ fun AuthDialog(
                             .fillMaxWidth()
                             .testTag("auth_password_field"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NexusGold,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                            focusedContainerColor = SurfaceElevated.copy(alpha = 0.5f),
-                            unfocusedContainerColor = SurfaceElevated.copy(alpha = 0.3f),
-                            focusedLabelColor = NexusGold,
-                            unfocusedLabelColor = TextSecondary,
-                            cursorColor = NexusGold
+                            focusedBorderColor = primaryColor,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                            focusedLabelColor = primaryColor,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            cursorColor = primaryColor
                         ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -448,6 +474,12 @@ fun AuthDialog(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Submit Button
+                val buttonBgModifier = if (isMultiColor || gradientColors.size > 1) {
+                    Modifier.background(tabBrush, RoundedCornerShape(14.dp))
+                } else {
+                    Modifier
+                }
+
                 Button(
                     onClick = {
                         focusManager.clearFocus()
@@ -463,24 +495,29 @@ fun AuthDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .then(buttonBgModifier)
                         .testTag("auth_submit_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = NexusGold
+                        containerColor = if (isMultiColor || gradientColors.size > 1) Color.Transparent else primaryColor,
+                        contentColor = onPrimaryColor,
+                        disabledContainerColor = primaryColor.copy(alpha = 0.4f),
+                        disabledContentColor = onPrimaryColor.copy(alpha = 0.5f)
                     ),
                     enabled = !isLoading && username.isNotBlank() && password.isNotBlank()
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = Color.Black,
+                            color = onPrimaryColor,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Text(
                             text = if (authMode == 0) "تسجيل الدخول" else "إنشاء الحساب",
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black,
+                            color = onPrimaryColor,
                             fontSize = 14.sp
                         )
                     }

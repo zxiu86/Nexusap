@@ -147,7 +147,7 @@ enum class SettingsSubCategory(
     ),
     ABOUT_UPDATES(
         title = "حول التطبيق والتحديثات",
-        subtitle = "إصدار v2.0.3 SUPER، سجل التغييرات، وقناة التليجرام",
+        subtitle = "إصدار v2.0.4 SUPER، سجل التغييرات، وقناة التليجرام",
         icon = Icons.Default.Info,
         gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0288D1))
     )

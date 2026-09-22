@@ -615,6 +615,7 @@ fun HomeScreen(
                 favoritesCount = uiState.favorites.size,
                 downloadedCount = uiState.downloadedChapters.size,
                 hasUpdate = uiState.updateInfo.updateAvailable,
+                accentColor = uiState.appSettings.accentColor,
                 onTabSelected = onTabSelected,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -654,6 +655,7 @@ fun HomeScreen(
             isLoading = uiState.isAuthLoading,
             errorMessage = uiState.authErrorMessage,
             successMessage = uiState.authSuccessMessage,
+            accentColor = uiState.appSettings.accentColor,
             onDismiss = onDismissAuthDialog,
             onSignInEmail = onSignInEmail,
             onSignUpEmail = onSignUpEmail,
@@ -738,16 +740,6 @@ fun NexusHomeTopBar(
     onAdminClick: () -> Unit = {},
     onReportClick: () -> Unit = {}
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "topbar_refresh_rotation")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = LinearEasing)
-        ),
-        label = "refresh_angle"
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -825,37 +817,11 @@ fun NexusHomeTopBar(
             }
         }
 
-        // Left Section: Live Refresh Button, Favorites Shortcut & Update Badge
+        // Left Section: Favorites Shortcut & Update Badge
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Live Force Sync Button with Spinning Feedback
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, if (isRefreshing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .clickable(enabled = !isRefreshing) { onRefreshClick() }
-                    .testTag("topbar_force_refresh_button")
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "تحديث البيانات المباشر وتجاوز الكاش",
-                        tint = if (isRefreshing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .size(17.dp)
-                            .rotate(if (isRefreshing) rotation else 0f)
-                    )
-                }
-            }
-
             // Favorites Quick Access Button
             if (favoritesCount > 0) {
                 Surface(
