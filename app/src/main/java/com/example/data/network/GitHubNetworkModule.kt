@@ -58,6 +58,11 @@ object GitHubNetworkModule {
 
     fun init(context: Context) {
         sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // Ensure data repo is Data and never accidentally overridden by legacy "nexusap"
+        val custom = sharedPrefs?.getString(KEY_CUSTOM_REPO, null)?.trim()
+        if (custom != null && custom.equals("nexusap", ignoreCase = true)) {
+            sharedPrefs?.edit()?.putString(KEY_CUSTOM_REPO, DEFAULT_DATA_REPO)?.apply()
+        }
         val httpCacheDirectory = File(context.cacheDir, "nexus_http_cache")
         val cacheSize = 50L * 1024 * 1024 // 50 MB Cache
         okHttpCache = Cache(httpCacheDirectory, cacheSize)
@@ -90,7 +95,10 @@ object GitHubNetworkModule {
         sharedPrefs?.edit()?.apply {
             if (token != null) putString(KEY_CUSTOM_TOKEN, token.trim())
             if (owner != null) putString(KEY_CUSTOM_OWNER, owner.trim())
-            if (repo != null) putString(KEY_CUSTOM_REPO, repo.trim())
+            if (repo != null) {
+                val cleanRepo = if (repo.trim().equals("nexusap", ignoreCase = true)) DEFAULT_DATA_REPO else repo.trim()
+                putString(KEY_CUSTOM_REPO, cleanRepo)
+            }
             if (branch != null) putString(KEY_CUSTOM_BRANCH, branch.trim())
             apply()
         }
@@ -111,11 +119,12 @@ object GitHubNetworkModule {
 
     fun getConfiguredRepo(): String {
         val custom = sharedPrefs?.getString(KEY_CUSTOM_REPO, null)?.trim()
-        if (!custom.isNullOrEmpty()) return custom
+        if (!custom.isNullOrEmpty() && !custom.equals("nexusap", ignoreCase = true)) return custom
         val repo = runCatching {
-            BuildConfig::class.java.getField("GITHUB_REPO").get(null) as? String
+            BuildConfig::class.java.getField("GITHUB_DATA_REPO").get(null) as? String
+                ?: BuildConfig::class.java.getField("GITHUB_REPO").get(null) as? String
         }.getOrNull()?.trim()
-        return if (!repo.isNullOrEmpty() && repo != "placeholder" && repo != "null") repo else DEFAULT_DATA_REPO
+        return if (!repo.isNullOrEmpty() && repo != "placeholder" && repo != "null" && !repo.equals("nexusap", ignoreCase = true)) repo else DEFAULT_DATA_REPO
     }
 
     fun getDataRepo(): String = getConfiguredRepo()
@@ -133,7 +142,7 @@ object GitHubNetworkModule {
     private val authInterceptor = Interceptor { chain ->
         val originalRequest = chain.request()
         val builder = originalRequest.newBuilder()
-            .header("User-Agent", "Nexus-Manga-App-Android/2.0.6")
+            .header("User-Agent", "Nexus-Manga-App-Android/2.0.7")
             .header("X-GitHub-Api-Version", "2022-11-28")
 
         val token = getActiveToken()
@@ -165,7 +174,7 @@ object GitHubNetworkModule {
             response.close()
             Log.w(TAG, "Retrying GET without Authorization header for public access...")
             val unauthRequest = originalRequest.newBuilder()
-                .header("User-Agent", "Nexus-Manga-App-Android/2.0.1")
+                .header("User-Agent", "Nexus-Manga-App-Android/2.0.7")
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .removeHeader("Authorization")
                 .build()
@@ -231,7 +240,7 @@ object GitHubNetworkModule {
             val userReq = Request.Builder()
                 .url("https://api.github.com/user")
                 .header("Authorization", authHeader)
-                .header("User-Agent", "Nexus-Manga-App-Android/2.0.1")
+                .header("User-Agent", "Nexus-Manga-App-Android/2.0.7")
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .build()
 
@@ -258,7 +267,7 @@ object GitHubNetworkModule {
             val repoReq = Request.Builder()
                 .url("https://api.github.com/repos/$owner/$repo")
                 .header("Authorization", authHeader)
-                .header("User-Agent", "Nexus-Manga-App-Android/2.0.1")
+                .header("User-Agent", "Nexus-Manga-App-Android/2.0.7")
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .build()
 
@@ -394,7 +403,7 @@ object GitHubNetworkModule {
 
             val requestBuilder = Request.Builder()
                 .url(targetUrl)
-                .header("User-Agent", "Nexus-Manga-App-Android/2.0.1")
+                .header("User-Agent", "Nexus-Manga-App-Android/2.0.7")
 
             if (forceFresh) {
                 requestBuilder

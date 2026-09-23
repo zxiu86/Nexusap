@@ -836,7 +836,20 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Details Screen Logic ---
     fun loadMangaDetails(mangaId: String) {
-        val manga = repository.getMangaById(mangaId) ?: return
+        val manga = repository.getMangaById(mangaId)
+        if (manga != null) {
+            updateDetailsUiState(manga)
+        }
+        viewModelScope.launch {
+            val freshManga = repository.refreshMangaDetails(mangaId)
+            if (freshManga != null) {
+                updateDetailsUiState(freshManga)
+            }
+        }
+    }
+
+    private fun updateDetailsUiState(manga: MangaItem) {
+        val mangaId = manga.id
         val isFav = repository.isFavorite(mangaId)
         val isReadLater = repository.isReadLater(mangaId)
         val lastRead = repository.getLastReadChapter(mangaId)

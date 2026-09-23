@@ -160,7 +160,7 @@ enum class SettingsSubCategory(
     ),
     ABOUT_UPDATES(
         title = "حول التطبيق والتحديثات",
-        subtitle = "إصدار v2.0.6 SUPER، سجل التغييرات، وقناة التليجرام",
+        subtitle = "إصدار v2.0.7 SUPER، سجل التغييرات، وقناة التليجرام",
         icon = Icons.Default.Info,
         gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0288D1))
     )
@@ -1177,7 +1177,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.6)
+        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.7)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1233,7 +1233,7 @@ private fun AppearanceSubPage(
                                     color = accentPrimary
                                 ) {
                                     Text(
-                                        text = "جديد v2.0.6",
+                                        text = "جديد v2.0.7",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,

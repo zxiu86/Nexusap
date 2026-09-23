@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -1200,12 +1202,27 @@ class MangaRepository(private val context: Context) {
                 return@withContext Result.success(_allMangaFlow.value)
             }
 
-            // Fetch info.json for each work in parallel with cache-busting
+            // 1. Immediately publish the catalog with disk-cached series info so UI populates instantly!
+            val initialList = worksMap.map { (key, workDto) ->
+                val slug = workDto.slug ?: workDto.id ?: key
+                val cachedInfo = loadSeriesInfoFromDiskCache(slug)
+                convertToMangaItem(slug, workDto, cachedInfo)
+            }
+            if (initialList.isNotEmpty()) {
+                val sortedInitial = sortMangaByRecency(initialList)
+                _allMangaFlow.value = sortedInitial
+                Log.d(TAG, "Instantly published ${sortedInitial.size} works from works.json")
+            }
+
+            // 2. Controlled parallel fetch of series info using Semaphore to avoid rate limits and connection drops
+            val semaphore = Semaphore(8)
             val fullMangaList = coroutineScope {
                 worksMap.map { (key, workDto) ->
                     async {
                         val slug = workDto.slug ?: workDto.id ?: key
-                        val info = fetchSeriesInfoSafely(owner, repo, slug, branch, forceFresh = forceFresh)
+                        val info = semaphore.withPermit {
+                            fetchSeriesInfoSafely(owner, repo, slug, branch, forceFresh = forceFresh)
+                        }
                         convertToMangaItem(slug, workDto, info)
                     }
                 }.awaitAll()
@@ -1214,14 +1231,49 @@ class MangaRepository(private val context: Context) {
             if (fullMangaList.isNotEmpty()) {
                 val sortedList = sortMangaByRecency(fullMangaList)
                 _allMangaFlow.value = sortedList
-                Log.d(TAG, "Successfully loaded and sorted ${sortedList.size} works from GitHub!")
+                Log.d(TAG, "Successfully loaded and sorted ${sortedList.size} works from GitHub Data repo!")
                 Result.success(sortedList)
             } else {
-                Result.success(emptyList())
+                Result.success(_allMangaFlow.value)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing data from GitHub", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Freshly fetches the latest series info (chapters, status, views) for a specific manga on-demand
+     */
+    suspend fun refreshMangaDetails(mangaId: String): MangaItem? = withContext(Dispatchers.IO) {
+        try {
+            val owner = GitHubNetworkModule.getConfiguredOwner()
+            val repo = GitHubNetworkModule.getDataRepo()
+            val branch = GitHubNetworkModule.getConfiguredBranch()
+            val info = fetchSeriesInfoSafely(owner, repo, mangaId, branch, forceFresh = true) ?: return@withContext null
+            val currentManga = getMangaById(mangaId) ?: return@withContext null
+            val workDto = WorkDto(
+                slug = currentManga.id,
+                title = currentManga.titleAr,
+                cover = currentManga.coverUrl,
+                summary = currentManga.synopsis,
+                type = currentManga.type.name,
+                author = currentManga.author,
+                artist = currentManga.artist,
+                genres = currentManga.genres,
+                rating = currentManga.rating.toDouble()
+            )
+            val updated = convertToMangaItem(mangaId, workDto, info)
+            val currentList = _allMangaFlow.value.toMutableList()
+            val idx = currentList.indexOfFirst { it.id == mangaId }
+            if (idx >= 0) {
+                currentList[idx] = updated
+                _allMangaFlow.value = currentList
+            }
+            updated
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed refreshing manga details for $mangaId: ${e.message}")
+            null
         }
     }
 

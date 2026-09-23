@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.6"
-    const val VERSION_CODE = 46
+    const val VERSION_NAME = "2.0.7"
+    const val VERSION_CODE = 47
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.6 SUPER"
+     * Short version string: "v2.0.7 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 46"
+     * Build identifier: "Build 47"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.6 SUPER (Build 46) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.7 SUPER (Build 47) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,11 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "معالجة جذرية وفورية للكراش عند فتح صفحة تخصيص المظهر واستقرار فائق لكافة خيارات الألوان.",
-        "تحديث مستودع التحديث الديناميكي التلقائي من داخل التطبيق وربطه بمستودع zxiu86/nexusap الجديد.",
-        "إضافة توهج وهالة لونية سينمائية ساحرة (Aura Glow) في صفحة تفاصيل العمل تشمل خلفية البانر وبطاقة كافر العمل.",
-        "تخصيص كامل لسرعة مرور التموج اللوني ودورة ظهوره ولونه لشريط الفوتر السفلي.",
-        "سمة اللون الأبيض الأنيق والمريح للعين لقراءة هادئة ومتزنة بدون إجهاد بصري.",
-        "ترقية إصدار التطبيق إلى 2.0.6 SUPER داخلياً وخارجياً لضمان أعلى مستويات الاستقرار والأداء."
+        "إصلاح جذري لمشكلة الاتصال بمستودع البيانات zxiu86/Data/data وتأكيد استقرار جلب كافة الأعمال والفصول.",
+        "تسريع استجابة تحميل قائمة المانجا والأعمال لتكون فورية بدون تأخير بفضل المعالجة المجمعة الذكية.",
+        "مزامنة موحدة ومتكاملة مع مستودع GitHub الرئيسي (zxiu86/Data) تشمل المستخدمين (user/) والمانجا والبلاغات (data/).",
+        "معالجة جذرية للتعليق والتحميل البطيء بفضل تحديد معدل التزامن (Concurrency Limiting).",
+        "ترقية إصدار التطبيق رسمياً إلى 2.0.7 SUPER داخلياً وخارجياً لضمان أعلى مستويات الكفاءة والاستقرار."
     )
 }

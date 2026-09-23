@@ -21,8 +21,8 @@ android {
     applicationId = "com.aistudio.nexus.manga"
     minSdk = 24
     targetSdk = 36
-    versionCode = 46
-    versionName = "2.0.6"
+    versionCode = 47
+    versionName = "2.0.7"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -39,7 +39,17 @@ android {
     buildConfigField(
       "String",
       "GITHUB_REPO",
-      javaString(System.getenv("GITHUB_REPO") ?: "nexusap")
+      javaString(System.getenv("GITHUB_REPO") ?: "Data")
+    )
+    buildConfigField(
+      "String",
+      "GITHUB_DATA_REPO",
+      javaString(System.getenv("GITHUB_DATA_REPO") ?: "Data")
+    )
+    buildConfigField(
+      "String",
+      "GITHUB_APP_REPO",
+      javaString(System.getenv("GITHUB_APP_REPO") ?: "nexusap")
     )
     buildConfigField("String", "GITHUB_TOKEN", javaString(""))
   }
