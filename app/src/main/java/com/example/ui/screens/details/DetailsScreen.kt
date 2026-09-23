@@ -61,6 +61,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.R
+import com.example.ui.components.GalaxyBackgroundVideo
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
@@ -804,106 +805,158 @@ fun MangaHeaderCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = BorderStroke(
             1.4.dp,
             Brush.linearGradient(
                 colors = listOf(
+                    Color.White.copy(alpha = 0.38f * auraAlpha + 0.12f),
                     accentPrimary.copy(alpha = auraAlpha),
-                    accentSecondary.copy(alpha = auraAlpha * 0.7f),
-                    accentPrimary.copy(alpha = 0.3f)
+                    accentSecondary.copy(alpha = auraAlpha * 0.75f),
+                    Color.White.copy(alpha = 0.22f)
                 )
             )
         )
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Subtle ambient colored glow wash inside the card body matching the cover
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+        ) {
+            // 🌌 1. Dedicated Galaxy Background Video (galaxy.mp4) playing seamlessly behind the card
+            GalaxyBackgroundVideo(
+                modifier = Modifier.matchParentSize(),
+                alpha = 0.82f
+            )
+
+            // 🪟 2. Glassmorphism Frosted Translucent Backdrop Layer
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF0F172A).copy(alpha = 0.48f),
+                                Color(0xFF090D16).copy(alpha = 0.68f)
+                            )
+                        )
+                    )
+            )
+
+            // 💎 3. Glassmorphism Specular Sheen (diagonal light reflection on glass surface)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.15f),
+                                Color.White.copy(alpha = 0.04f),
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.06f)
+                            ),
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset(900f, 450f)
+                        )
+                    )
+            )
+
+            // ✨ 4. Ambient Colored Glow wash matching work theme
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
-                                accentPrimary.copy(alpha = 0.12f * auraAlpha),
-                                accentSecondary.copy(alpha = 0.06f * auraAlpha),
+                                accentPrimary.copy(alpha = 0.14f * auraAlpha),
+                                accentSecondary.copy(alpha = 0.08f * auraAlpha),
                                 Color.Transparent
                             )
                         )
                     )
             )
 
+            // 📖 5. Foreground Content: 3D Cover, titles, and Glassmorphic badges in exact position
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-            // 3D Rotating Work Cover
-            Rotating3DCoverCard(manga = manga)
+                // 3D Rotating Work Cover (in its exact original place)
+                Rotating3DCoverCard(manga = manga)
 
-            // Manga Metadata Details
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = manga.titleAr,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        lineHeight = 24.sp
-                    ),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = manga.titleEn,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextTertiary,
-                        fontSize = 12.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-
-                // Status & Total Chapters Tag
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SurfaceVariantDark,
-                    border = BorderStroke(1.dp, SurfaceElevated),
-                    modifier = Modifier.padding(top = 4.dp)
+                // Manga Metadata Details
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(if (manga.status.contains("مستمر")) BadgeSuccess else NexusGold)
-                        )
-                        Text(
-                            text = "${manga.status} • ${manga.totalChaptersCount} فصل متاح",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = NexusGoldLight,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                    Text(
+                        text = manga.titleAr,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            lineHeight = 24.sp,
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color.Black.copy(alpha = 0.75f),
+                                blurRadius = 8f
                             )
-                        )
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = manga.titleEn,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 12.sp,
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color.Black.copy(alpha = 0.65f),
+                                blurRadius = 6f
+                            )
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Glassmorphic Status & Total Chapters Tag
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Black.copy(alpha = 0.45f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (manga.status.contains("مستمر")) BadgeSuccess else NexusGold)
+                            )
+                            Text(
+                                text = "${manga.status} • ${manga.totalChaptersCount} فصل متاح",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = NexusGoldLight,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
 }
 
 
