@@ -225,21 +225,55 @@ fun DetailsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Atmospheric Top Background Glow
+        // 🌟 Atmospheric Top Ambient Banner & Radiant Color Glow (بادي وبانر متوهج بلون وهوية العمل)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            accentPrimary.copy(alpha = 0.35f),
-                            accentSecondary.copy(alpha = 0.15f),
-                            Color.Transparent
+                .height(330.dp)
+        ) {
+            // Ambient Art Backdrop from the Work Cover itself
+            NexusMangaImage(
+                imageUrl = manga.coverUrl,
+                fallbackRes = manga.coverRes,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.24f }
+            )
+
+            // Dynamic Radiant Color Glow Gradient Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.65f),
+                                accentPrimary.copy(alpha = 0.38f),
+                                accentSecondary.copy(alpha = 0.20f),
+                                MaterialTheme.colorScheme.background
+                            )
                         )
                     )
-                )
-        )
+            )
+
+            // Luminous Radial Light Halo centered behind cover card
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                accentPrimary.copy(alpha = 0.45f),
+                                accentSecondary.copy(alpha = 0.22f),
+                                Color.Transparent
+                            ),
+                            radius = 850f
+                        )
+                    )
+            )
+        }
 
         LazyColumn(
             modifier = Modifier
@@ -569,38 +603,76 @@ fun Rotating3DCoverCard(
         label = "rotation_y_anim"
     )
 
+    // Breathing Colorful Aura Glow around the cover card
+    val auraGlowAnim by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cover_aura_pulse"
+    )
+
     val currentRotation = animRotationY
     val normalizedRotation = (currentRotation % 360f + 360f) % 360f
     val isBackFace = normalizedRotation in 90f..270f
 
     Box(
-        modifier = modifier
-            .width(120.dp)
-            .aspectRatio(0.70f)
-            .clip(RoundedCornerShape(16.dp))
-            .graphicsLayer {
-                rotationY = currentRotation
-                cameraDistance = 16f * density
-                shadowElevation = 12f
-                shape = RoundedCornerShape(16.dp)
-                clip = true
-            }
-            .border(
-                BorderStroke(
-                    1.6.dp,
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            accentPrimary,
-                            accentSecondary,
-                            accentPrimary.copy(alpha = 0.6f)
-                        )
-                    )
-                ),
-                RoundedCornerShape(16.dp)
-            )
-            .background(MaterialTheme.colorScheme.surface),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        // ✨ Colorful Aura Halo / Radiant Glow behind the cover card
+        Box(
+            modifier = Modifier
+                .width(136.dp)
+                .height(188.dp)
+                .graphicsLayer {
+                    alpha = auraGlowAnim
+                    scaleX = 1f + (auraGlowAnim - 0.45f) * 0.12f
+                    scaleY = 1f + (auraGlowAnim - 0.45f) * 0.12f
+                }
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            accentPrimary.copy(alpha = 0.65f),
+                            accentSecondary.copy(alpha = 0.40f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // 3D Rotating Work Cover
+        Box(
+            modifier = Modifier
+                .width(120.dp)
+                .aspectRatio(0.70f)
+                .clip(RoundedCornerShape(16.dp))
+                .graphicsLayer {
+                    rotationY = currentRotation
+                    cameraDistance = 16f * density
+                    shadowElevation = 14f
+                    shape = RoundedCornerShape(16.dp)
+                    clip = true
+                }
+                .border(
+                    BorderStroke(
+                        1.8.dp,
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                accentPrimary,
+                                accentSecondary,
+                                accentPrimary.copy(alpha = 0.7f)
+                            )
+                        )
+                    ),
+                    RoundedCornerShape(16.dp)
+                )
+                .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center
+        ) {
         // FRONT FACE: Manga Cover
         Box(
             modifier = Modifier
@@ -708,34 +780,65 @@ fun Rotating3DCoverCard(
         }
     }
 }
+}
 
 @Composable
 fun MangaHeaderCard(
     manga: MangaItem
 ) {
+    val accentPrimary = MaterialTheme.colorScheme.primary
+    val accentSecondary = MaterialTheme.colorScheme.secondary
+
+    val infiniteTransition = rememberInfiniteTransition(label = "manga_header_aura")
+    val auraAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "header_aura_pulse"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
         border = BorderStroke(
-            1.2.dp,
+            1.4.dp,
             Brush.linearGradient(
                 colors = listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                    accentPrimary.copy(alpha = auraAlpha),
+                    accentSecondary.copy(alpha = auraAlpha * 0.7f),
+                    accentPrimary.copy(alpha = 0.3f)
                 )
             )
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Subtle ambient colored glow wash inside the card body matching the cover
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                accentPrimary.copy(alpha = 0.12f * auraAlpha),
+                                accentSecondary.copy(alpha = 0.06f * auraAlpha),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // 3D Rotating Work Cover
             Rotating3DCoverCard(manga = manga)
 
@@ -800,6 +903,7 @@ fun MangaHeaderCard(
             }
         }
     }
+}
 }
 
 

@@ -253,7 +253,7 @@ object ThemePalettes {
             id = 0,
             name = "حسب سمة التطبيق",
             description = "يتغير تلقائياً مع الثيم المختار",
-            colors = emptyList(), // Resolved dynamically
+            colors = listOf(NexusGold, NexusBluePrimary, NexusVioletPrimary),
             previewGradient = listOf(NexusGold, NexusBluePrimary, NexusVioletPrimary)
         ),
         FooterWaveColorPreset(

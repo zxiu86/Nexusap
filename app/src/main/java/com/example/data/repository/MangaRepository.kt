@@ -1621,7 +1621,7 @@ class MangaRepository(private val context: Context) {
 
         try {
             val owner = GitHubNetworkModule.getConfiguredOwner()
-            val appRepo = GitHubNetworkModule.getAppRepo() // "Nexus"
+            val appRepo = GitHubNetworkModule.getAppRepo() // "nexusap"
 
             // 1. Try getLatestRelease from Nexus repo
             try {

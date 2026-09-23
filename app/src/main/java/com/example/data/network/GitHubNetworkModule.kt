@@ -42,7 +42,7 @@ object GitHubNetworkModule {
 
     const val DEFAULT_OWNER = "zxiu86"
     const val DEFAULT_DATA_REPO = "Data"
-    const val DEFAULT_APP_REPO = "Nexus"
+    const val DEFAULT_APP_REPO = "nexusap"
     const val DEFAULT_BRANCH = "main"
 
     private var sharedPrefs: SharedPreferences? = null
@@ -133,7 +133,7 @@ object GitHubNetworkModule {
     private val authInterceptor = Interceptor { chain ->
         val originalRequest = chain.request()
         val builder = originalRequest.newBuilder()
-            .header("User-Agent", "Nexus-Manga-App-Android/2.0.1")
+            .header("User-Agent", "Nexus-Manga-App-Android/2.0.6")
             .header("X-GitHub-Api-Version", "2022-11-28")
 
         val token = getActiveToken()

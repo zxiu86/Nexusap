@@ -160,7 +160,7 @@ enum class SettingsSubCategory(
     ),
     ABOUT_UPDATES(
         title = "حول التطبيق والتحديثات",
-        subtitle = "إصدار v2.0.5 SUPER، سجل التغييرات، وقناة التليجرام",
+        subtitle = "إصدار v2.0.6 SUPER، سجل التغييرات، وقناة التليجرام",
         icon = Icons.Default.Info,
         gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0288D1))
     )
@@ -1177,7 +1177,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.5)
+        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.6)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1233,7 +1233,7 @@ private fun AppearanceSubPage(
                                     color = accentPrimary
                                 ) {
                                     Text(
-                                        text = "جديد v2.0.5",
+                                        text = "جديد v2.0.6",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
@@ -1288,11 +1288,18 @@ private fun AppearanceSubPage(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    val sweepColors = if (preset.previewGradient.size >= 2) {
+                                        preset.previewGradient
+                                    } else if (preset.colors.size >= 2) {
+                                        preset.colors
+                                    } else {
+                                        listOf(accentPrimary, accentPrimary.copy(alpha = 0.5f))
+                                    }
                                     Box(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(Brush.sweepGradient(preset.colors))
+                                            .background(Brush.sweepGradient(sweepColors))
                                             .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -1971,7 +1978,8 @@ private fun MiniFooterWavePreview(
     )
 
     val cosmeticColors = remember(footerWaveColor, accentColorId) {
-        ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColorId)
+        val resolved = ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColorId)
+        if (resolved.size >= 2) resolved else listOf(accentPrimary, accentPrimary.copy(alpha = 0.5f))
     }
 
     Box(
@@ -1983,24 +1991,27 @@ private fun MiniFooterWavePreview(
             .border(1.dp, Color(0xFF334155), RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // Wave Shimmer Canvas
+        // Wave Shimmer Canvas with safe dimensions and horizontal gradient
         if (waveAlpha > 0.01f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasWidth = size.width
                 val canvasHeight = size.height
-                val centerX = canvasWidth * waveProgress
-                val radius = canvasWidth * 0.35f
-
-                val waveBrush = Brush.radialGradient(
-                    colors = listOf(
-                        cosmeticColors.first().copy(alpha = waveAlpha * 0.9f),
-                        cosmeticColors.getOrElse(1) { cosmeticColors.first() }.copy(alpha = waveAlpha * 0.5f),
-                        Color.Transparent
-                    ),
-                    center = Offset(centerX, canvasHeight / 2),
-                    radius = radius
-                )
-                drawRect(brush = waveBrush)
+                if (canvasWidth > 0f && canvasHeight > 0f) {
+                    val centerX = canvasWidth * waveProgress
+                    val waveWidth = canvasWidth * 0.35f
+                    val waveBrush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            cosmeticColors.first().copy(alpha = 0.35f * waveAlpha),
+                            cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.85f * waveAlpha),
+                            cosmeticColors.last().copy(alpha = 0.35f * waveAlpha),
+                            Color.Transparent
+                        ),
+                        startX = centerX - waveWidth,
+                        endX = centerX + waveWidth
+                    )
+                    drawRect(brush = waveBrush)
+                }
             }
         }
 

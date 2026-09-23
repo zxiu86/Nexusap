@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.5"
-    const val VERSION_CODE = 45
+    const val VERSION_NAME = "2.0.6"
+    const val VERSION_CODE = 46
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.5 SUPER"
+     * Short version string: "v2.0.6 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 45"
+     * Build identifier: "Build 46"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.5 SUPER (Build 45) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.6 SUPER (Build 46) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,11 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "إمكانية تخصيص سرعة مرور التموج اللوني وسرعة ظهوره في كل دورة لشريط الفوتر السفلي بحرية تامة.",
-        "إمكانية اختيار لون التموج اللوني لشريط الفوتر مع تشكيلة ألوان نيون وكريستالية متوهجة.",
-        "إضافة سمة اللون الأبيض الأنيق والمريح للتطبيق لتجربة قراءة وتصفح نقية ومريحة للعين.",
-        "إعادة تصميم شاملة وأكثر ديناميكية لصفحة تخصيص المظهر في الإعدادات مع لوحة معاينة حية وتوزيع أرحب للبطاقات.",
-        "ترقية إصدار التطبيق إلى 2.0.5 SUPER مع تحسينات في استقرار الأداء وسلاسة الحركات والتنقل."
+        "معالجة جذرية وفورية للكراش عند فتح صفحة تخصيص المظهر واستقرار فائق لكافة خيارات الألوان.",
+        "تحديث مستودع التحديث الديناميكي التلقائي من داخل التطبيق وربطه بمستودع zxiu86/nexusap الجديد.",
+        "إضافة توهج وهالة لونية سينمائية ساحرة (Aura Glow) في صفحة تفاصيل العمل تشمل خلفية البانر وبطاقة كافر العمل.",
+        "تخصيص كامل لسرعة مرور التموج اللوني ودورة ظهوره ولونه لشريط الفوتر السفلي.",
+        "سمة اللون الأبيض الأنيق والمريح للعين لقراءة هادئة ومتزنة بدون إجهاد بصري.",
+        "ترقية إصدار التطبيق إلى 2.0.6 SUPER داخلياً وخارجياً لضمان أعلى مستويات الاستقرار والأداء."
     )
 }
