@@ -1027,6 +1027,18 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         settingsManager.updateCosmicSpaceFooterEnabled(enabled)
     }
 
+    fun updateFooterWaveSpeed(speed: Int) {
+        settingsManager.updateFooterWaveSpeed(speed)
+    }
+
+    fun updateFooterWaveInterval(interval: Int) {
+        settingsManager.updateFooterWaveInterval(interval)
+    }
+
+    fun updateFooterWaveColor(color: Int) {
+        settingsManager.updateFooterWaveColor(color)
+    }
+
     fun updatePreventChapterCache(prevent: Boolean) {
         settingsManager.updatePreventChapterCache(prevent)
     }

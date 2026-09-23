@@ -25,17 +25,41 @@ private data class AccentColors(
 fun getAppColorScheme(
     isDark: Boolean,
     backgroundStyle: Int, // 0: Default, 1: AMOLED Pure Black, 2: Pure White
-    accentColor: Int // 0..7: Solid, 10..15: Multi-Color Gradients
+    accentColor: Int // 0..8: Solid, 10..18: Multi-Color Gradients
 ): ColorScheme {
     val preset = ThemePalettes.getPresetById(accentColor)
-    val (primary, onPrimary, primaryContainer, onPrimaryContainer, secondary, secondaryContainer) = AccentColors(
-        primary = preset.primaryColor,
-        onPrimary = preset.onPrimary,
-        primaryContainer = preset.primaryColor.copy(alpha = 0.25f),
-        onPrimaryContainer = if (isDark) TextPrimary else TextPrimaryLight,
-        secondary = preset.secondaryColor,
-        secondaryContainer = preset.secondaryColor.copy(alpha = 0.2f)
-    )
+    val isWhiteTheme = preset.id == 8 || preset.id == 18
+
+    val (primary, onPrimary, primaryContainer, onPrimaryContainer, secondary, secondaryContainer) = if (isWhiteTheme) {
+        if (isDark) {
+            AccentColors(
+                primary = NexusWhitePrimary,
+                onPrimary = Color(0xFF0F172A),
+                primaryContainer = Color.White.copy(alpha = 0.18f),
+                onPrimaryContainer = Color.White,
+                secondary = NexusWhiteDark,
+                secondaryContainer = Color.White.copy(alpha = 0.10f)
+            )
+        } else {
+            AccentColors(
+                primary = Color(0xFF0F172A),
+                onPrimary = Color.White,
+                primaryContainer = Color(0xFFF1F5F9),
+                onPrimaryContainer = Color(0xFF0F172A),
+                secondary = Color(0xFF334155),
+                secondaryContainer = Color(0xFFE2E8F0)
+            )
+        }
+    } else {
+        AccentColors(
+            primary = preset.primaryColor,
+            onPrimary = preset.onPrimary,
+            primaryContainer = preset.primaryColor.copy(alpha = 0.25f),
+            onPrimaryContainer = if (isDark) TextPrimary else TextPrimaryLight,
+            secondary = preset.secondaryColor,
+            secondaryContainer = preset.secondaryColor.copy(alpha = 0.2f)
+        )
+    }
 
     return if (isDark) {
         val (bg, surf, surfVar, surfElev) = when (backgroundStyle) {
@@ -52,7 +76,7 @@ fun getAppColorScheme(
             onSecondary = TextPrimary,
             secondaryContainer = secondaryContainer,
             onSecondaryContainer = TextPrimary,
-            tertiary = NexusGold,
+            tertiary = if (isWhiteTheme) Color.White else NexusGold,
             onTertiary = bg,
             background = bg,
             onBackground = TextPrimary,
@@ -63,6 +87,7 @@ fun getAppColorScheme(
             outline = surfElev
         )
     } else {
+        val bg = if (backgroundStyle == 2) Color(0xFFFAFAFC) else BackgroundLight
         lightColorScheme(
             primary = primary,
             onPrimary = onPrimary,
@@ -72,9 +97,9 @@ fun getAppColorScheme(
             onSecondary = Color.White,
             secondaryContainer = secondaryContainer,
             onSecondaryContainer = TextPrimaryLight,
-            tertiary = NexusOrange,
+            tertiary = if (isWhiteTheme) Color(0xFF475569) else NexusOrange,
             onTertiary = Color.White,
-            background = if (backgroundStyle == 2) Color.White else BackgroundLight,
+            background = bg,
             onBackground = TextPrimaryLight,
             surface = SurfaceLight,
             onSurface = TextPrimaryLight,

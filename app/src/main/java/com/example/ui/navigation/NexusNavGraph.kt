@@ -169,6 +169,15 @@ fun NexusNavGraph(
                     onUpdateCosmicSpaceFooterEnabled = { enabled ->
                         viewModel.updateCosmicSpaceFooterEnabled(enabled)
                     },
+                    onUpdateFooterWaveSpeed = { speed ->
+                        viewModel.updateFooterWaveSpeed(speed)
+                    },
+                    onUpdateFooterWaveInterval = { interval ->
+                        viewModel.updateFooterWaveInterval(interval)
+                    },
+                    onUpdateFooterWaveColor = { color ->
+                        viewModel.updateFooterWaveColor(color)
+                    },
                     onUpdatePreventChapterCache = { prevent ->
                         viewModel.updatePreventChapterCache(prevent)
                     },

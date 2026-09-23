@@ -108,6 +108,17 @@ object ThemePalettes {
             secondaryColor = NexusAmberDark,
             gradientColors = listOf(NexusAmberPrimary, NexusAmberDark),
             onPrimary = Color.Black
+        ),
+        ThemePalettePreset(
+            id = 8,
+            name = "أبيض أنيق ومريح",
+            categoryName = "الأساسية",
+            isMultiColor = false,
+            primaryColor = NexusWhitePrimary,
+            secondaryColor = NexusWhiteDark,
+            gradientColors = listOf(Color.White, NexusWhitePrimary, NexusWhiteDark),
+            onPrimary = Color(0xFF0F172A),
+            badgeLabel = "أنيق ومريح"
         )
     )
 
@@ -200,6 +211,17 @@ object ThemePalettes {
             gradientColors = listOf(NexusAmberPrimary, NexusAmberLight, NexusAmberDark),
             onPrimary = Color.Black,
             badgeLabel = "تدرج للبطاقات"
+        ),
+        ThemePalettePreset(
+            id = 18,
+            name = "تدرج أبيض لؤلؤي فاخر",
+            categoryName = "تدرجات أحدث الأعمال",
+            isMultiColor = true,
+            primaryColor = Color.White,
+            secondaryColor = NexusWhiteDark,
+            gradientColors = listOf(Color.White, Color(0xFFE2E8F0), Color(0xFFCBD5E1)),
+            onPrimary = Color(0xFF0F172A),
+            badgeLabel = "تدرج للبطاقات"
         )
     )
 
@@ -215,5 +237,86 @@ object ThemePalettes {
 
     fun getGradientColors(id: Int): List<Color> {
         return getPresetById(id).gradientColors
+    }
+
+    // --- Footer Wave Customization Color Models ---
+    data class FooterWaveColorPreset(
+        val id: Int,
+        val name: String,
+        val description: String,
+        val colors: List<Color>,
+        val previewGradient: List<Color>
+    )
+
+    val FOOTER_WAVE_COLOR_PRESETS = listOf(
+        FooterWaveColorPreset(
+            id = 0,
+            name = "حسب سمة التطبيق",
+            description = "يتغير تلقائياً مع الثيم المختار",
+            colors = emptyList(), // Resolved dynamically
+            previewGradient = listOf(NexusGold, NexusBluePrimary, NexusVioletPrimary)
+        ),
+        FooterWaveColorPreset(
+            id = 1,
+            name = "أبيض كريستالي أنيق",
+            description = "وهج أبيض لؤلؤي ناصع وراقٍ",
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFF1F5F9), Color(0xFFE2E8F0)),
+            previewGradient = listOf(Color.White, Color(0xFFE2E8F0), Color.White)
+        ),
+        FooterWaveColorPreset(
+            id = 2,
+            name = "أورورا نيون قطبي",
+            description = "مزيج سماوي نيون وبنفسجي سحري",
+            colors = listOf(Color(0xFF00F0FF), Color(0xFF8B5CF6), Color(0xFF10B981)),
+            previewGradient = listOf(Color(0xFF00F0FF), Color(0xFF8B5CF6), Color(0xFF10B981))
+        ),
+        FooterWaveColorPreset(
+            id = 3,
+            name = "شفق ذهبي ملكي",
+            description = "أشعة ذهبية شمسية دافئة ومتوهجة",
+            colors = listOf(Color(0xFFFFD700), Color(0xFFFFA000), Color(0xFFFFE082)),
+            previewGradient = listOf(Color(0xFFFFD700), Color(0xFFFFA000), Color(0xFFFFD54F))
+        ),
+        FooterWaveColorPreset(
+            id = 4,
+            name = "بنفسجي كوني فلكي",
+            description = "إشعاع بنفسجي نيون مستوحى من الفضاء",
+            colors = listOf(Color(0xFFB388FF), Color(0xFF7C4DFF), Color(0xFFE040FB)),
+            previewGradient = listOf(Color(0xFFB388FF), Color(0xFF7C4DFF), Color(0xFFE040FB))
+        ),
+        FooterWaveColorPreset(
+            id = 5,
+            name = "زمردي نيون ساطع",
+            description = "طاقة خضراء نيون نقية ومنعشة",
+            colors = listOf(Color(0xFF00E676), Color(0xFF1DE9B6), Color(0xFF00C853)),
+            previewGradient = listOf(Color(0xFF00E676), Color(0xFF1DE9B6), Color(0xFF00C853))
+        ),
+        FooterWaveColorPreset(
+            id = 6,
+            name = "وردي أزهار الكرز",
+            description = "تموج وردي رقيق ومشرق",
+            colors = listOf(Color(0xFFFF4081), Color(0xFFFF80AB), Color(0xFFFF1744)),
+            previewGradient = listOf(Color(0xFFFF4081), Color(0xFFFF80AB), Color(0xFFFF1744))
+        ),
+        FooterWaveColorPreset(
+            id = 7,
+            name = "طيف نيون متعدد",
+            description = "قوس قزح من الألوان المتألقة الحية",
+            colors = listOf(Color(0xFFFF007F), Color(0xFF00F0FF), Color(0xFFFFD700), Color(0xFF7928CA)),
+            previewGradient = listOf(Color(0xFFFF007F), Color(0xFF00F0FF), Color(0xFFFFD700), Color(0xFF7928CA))
+        )
+    )
+
+    fun resolveFooterWaveColors(colorId: Int, currentThemeAccent: Int): List<Color> {
+        if (colorId == 0) {
+            val preset = getPresetById(currentThemeAccent)
+            return if (preset.gradientColors.size > 1) {
+                preset.gradientColors
+            } else {
+                listOf(preset.primaryColor, preset.secondaryColor, preset.primaryColor)
+            }
+        }
+        return FOOTER_WAVE_COLOR_PRESETS.firstOrNull { it.id == colorId }?.colors
+            ?: listOf(Color.White, Color(0xFFE2E8F0), Color.White)
     }
 }

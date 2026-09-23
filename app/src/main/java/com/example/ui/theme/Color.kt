@@ -53,6 +53,13 @@ val NexusAmberLight = Color(0xFFFBBF24)
 val NexusAmberDark = Color(0xFFD97706)
 val NexusAmberContainer = Color(0xFF78350F)
 
+// Accent: Elegant Comfortable White (أبيض أنيق ومريح = #F8FAFC / #FFFFFF)
+val NexusWhitePrimary = Color(0xFFF8FAFC)
+val NexusWhiteLight = Color(0xFFFFFFFF)
+val NexusWhiteDark = Color(0xFFCBD5E1)
+val NexusWhiteContainer = Color(0xFFE2E8F0)
+val NexusWhiteAccent = Color(0xFFE2E8F0)
+
 // --- Aesthetic Multi-Color Gradient Palettes (تدرجات ألوان تجميلية متعددة) ---
 // Preset 10: Aurora Borealis (الشفق القطبي) - Cyan, Violet, Emerald
 val AuroraCyan = Color(0xFF06B6D4)

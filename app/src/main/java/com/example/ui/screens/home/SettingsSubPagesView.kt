@@ -9,8 +9,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +61,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.Waves
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -147,7 +160,7 @@ enum class SettingsSubCategory(
     ),
     ABOUT_UPDATES(
         title = "حول التطبيق والتحديثات",
-        subtitle = "إصدار v2.0.4 SUPER، سجل التغييرات، وقناة التليجرام",
+        subtitle = "إصدار v2.0.5 SUPER، سجل التغييرات، وقناة التليجرام",
         icon = Icons.Default.Info,
         gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0288D1))
     )
@@ -176,6 +189,9 @@ fun SettingsModernContainer(
     onUpdateAccentColor: (Int) -> Unit = {},
     onUpdateCardAnimationEnabled: (Boolean) -> Unit = {},
     onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit = {},
+    onUpdateFooterWaveSpeed: (Int) -> Unit = {},
+    onUpdateFooterWaveInterval: (Int) -> Unit = {},
+    onUpdateFooterWaveColor: (Int) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit = {},
     onDeleteAllDownloads: () -> Unit = {},
     onOpenAuthDialog: () -> Unit = {},
@@ -249,6 +265,9 @@ fun SettingsModernContainer(
                             onUpdateAccentColor = onUpdateAccentColor,
                             onUpdateCardAnimationEnabled = onUpdateCardAnimationEnabled,
                             onUpdateCosmicSpaceFooterEnabled = onUpdateCosmicSpaceFooterEnabled,
+                            onUpdateFooterWaveSpeed = onUpdateFooterWaveSpeed,
+                            onUpdateFooterWaveInterval = onUpdateFooterWaveInterval,
+                            onUpdateFooterWaveColor = onUpdateFooterWaveColor,
                             onUpdatePreventChapterCache = onUpdatePreventChapterCache,
                             onOpenAuthDialog = onOpenAuthDialog,
                             onOpenAdminDialog = onOpenAdminDialog,
@@ -583,6 +602,9 @@ private fun SettingsSubPageDetailView(
     onUpdateAccentColor: (Int) -> Unit,
     onUpdateCardAnimationEnabled: (Boolean) -> Unit,
     onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit,
+    onUpdateFooterWaveSpeed: (Int) -> Unit = {},
+    onUpdateFooterWaveInterval: (Int) -> Unit = {},
+    onUpdateFooterWaveColor: (Int) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit,
     onOpenAuthDialog: () -> Unit,
     onOpenAdminDialog: () -> Unit,
@@ -653,7 +675,10 @@ private fun SettingsSubPageDetailView(
                         onUpdateAccentColor = onUpdateAccentColor,
                         onUpdateBackgroundStyle = onUpdateBackgroundStyle,
                         onUpdateCardAnimationEnabled = onUpdateCardAnimationEnabled,
-                        onUpdateCosmicSpaceFooterEnabled = onUpdateCosmicSpaceFooterEnabled
+                        onUpdateCosmicSpaceFooterEnabled = onUpdateCosmicSpaceFooterEnabled,
+                        onUpdateFooterWaveSpeed = onUpdateFooterWaveSpeed,
+                        onUpdateFooterWaveInterval = onUpdateFooterWaveInterval,
+                        onUpdateFooterWaveColor = onUpdateFooterWaveColor
                     )
                 }
             }
@@ -726,7 +751,8 @@ private fun SettingsSubPageDetailView(
 }
 
 /**
- * 1. Appearance & Theming Sub-Page
+ * 1. Appearance & Theming Sub-Page - Redesigned with Dynamic Spacious Layout,
+ * Footer Wave Customizer, and Elegant White Theme Showcase
  */
 @Composable
 private fun AppearanceSubPage(
@@ -736,63 +762,121 @@ private fun AppearanceSubPage(
     onUpdateAccentColor: (Int) -> Unit,
     onUpdateBackgroundStyle: (Int) -> Unit,
     onUpdateCardAnimationEnabled: (Boolean) -> Unit,
-    onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit
+    onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit,
+    onUpdateFooterWaveSpeed: (Int) -> Unit,
+    onUpdateFooterWaveInterval: (Int) -> Unit,
+    onUpdateFooterWaveColor: (Int) -> Unit
 ) {
     val themeMode = uiState.appSettings.themeMode
     val accentColor = uiState.appSettings.accentColor
     val backgroundStyle = uiState.appSettings.backgroundStyle
     val cardAnimationEnabled = uiState.appSettings.cardAnimationEnabled
     val cosmicSpaceFooterEnabled = uiState.appSettings.cosmicSpaceFooterEnabled
+    val footerWaveSpeed = uiState.appSettings.footerWaveSpeed
+    val footerWaveInterval = uiState.appSettings.footerWaveInterval
+    val footerWaveColor = uiState.appSettings.footerWaveColor
     val isCosmicUnlocked = uiState.isCosmicAuraUnlocked
     val totalRead = uiState.totalReadChaptersCount
 
+    val activePreset = remember(accentColor) { ThemePalettes.getPresetById(accentColor) }
+    var selectedPaletteTab by remember { mutableStateOf(if (activePreset.isMultiColor) 1 else 0) }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Theme Mode Selector
+        // 🌟 1. Interactive Live Appearance Studio (لوحة المعاينة التفاعلية الحية)
+        LiveAppearanceStudioCard(
+            themeMode = themeMode,
+            accentPreset = activePreset,
+            backgroundStyle = backgroundStyle,
+            cardAnimationEnabled = cardAnimationEnabled,
+            footerWaveSpeed = footerWaveSpeed,
+            footerWaveInterval = footerWaveInterval,
+            footerWaveColor = footerWaveColor
+        )
+
+        // 💡 2. Lighting Mode Card (وضع الإضاءة المريح)
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = "وضع الإضاءة:",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "وضع الإضاءة العام",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = "اختر نمط الإضاءة الأنسب لراحتك البصرية أثناء التصفح",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = accentPrimary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = when (themeMode) {
+                                1 -> "داكن 🌙"
+                                2 -> "فاتح ☀️"
+                                else -> "تلقائي ⚙️"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = accentPrimary,
+                                fontSize = 10.5.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    ThemeModeCard(
+                    LightingModeCard(
                         title = "تلقائي",
                         subtitle = "حسب النظام",
+                        icon = Icons.Default.Brightness4,
                         isSelected = themeMode == 0,
                         accent = accentPrimary,
                         onClick = { onUpdateThemeMode(0) },
                         modifier = Modifier.weight(1f)
                     )
 
-                    ThemeModeCard(
+                    LightingModeCard(
                         title = "داكن",
                         subtitle = "مريح للعين",
+                        icon = Icons.Default.Brightness4,
                         isSelected = themeMode == 1,
                         accent = accentPrimary,
                         onClick = { onUpdateThemeMode(1) },
                         modifier = Modifier.weight(1f)
                     )
 
-                    ThemeModeCard(
+                    LightingModeCard(
                         title = "فاتح",
-                        subtitle = "ساطع",
+                        subtitle = "أبيض أنيق",
+                        icon = Icons.Default.AutoAwesome,
                         isSelected = themeMode == 2,
                         accent = accentPrimary,
                         onClick = { onUpdateThemeMode(2) },
@@ -802,76 +886,290 @@ private fun AppearanceSubPage(
             }
         }
 
-        // Multi-Color Gradient Presets
+        // 🤍 3. Theme Palette & Spotlight on the New "Elegant White" Theme (السمة واللون الأبيض الأنيق)
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = "تدرجات لونية جمالية لبطاقات أحدث الأعمال:",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-
-                val gradientPresets = ThemePalettes.GRADIENT_PRESETS
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // Header with badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(gradientPresets, key = { it.id }) { preset ->
-                        val isSelected = accentColor == preset.id
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(
-                                if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    Column {
+                        Text(
+                            text = "سمة التطبيق وألوان الهوية",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = "اختر السمة التي تزين عناصر الواجهة وقوائم التطبيق",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = activePreset.primaryColor.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = activePreset.name,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = activePreset.primaryColor,
+                                fontSize = 10.5.sp
                             ),
-                            modifier = Modifier
-                                .width(130.dp)
-                                .clickable { onUpdateAccentColor(preset.id) }
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                // ✨ Featured Spotlight: Elegant White Theme Banner (اللون الأبيض الأنيق والمريح)
+                val isWhiteActive = accentColor == 8 || accentColor == 18
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isWhiteActive) Color(0xFFF8FAFC) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(
+                        if (isWhiteActive) 2.dp else 1.2.dp,
+                        if (isWhiteActive) Color(0xFFE2E8F0) else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onUpdateAccentColor(8) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // White Pearl Icon Badge
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFFFFFFF),
+                            border = BorderStroke(1.5.dp, Color(0xFFCBD5E1)),
+                            modifier = Modifier.size(42.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(Brush.sweepGradient(preset.gradientColors)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = preset.name,
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = 11.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color(0xFF0F172A),
+                                    modifier = Modifier.size(20.dp)
                                 )
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "اللون الأبيض الأنيق والمريح",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp,
+                                        color = if (isWhiteActive) Color(0xFF0F172A) else MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFF0F172A)
+                                ) {
+                                    Text(
+                                        text = "جديد ✨",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "مظهر لؤلؤي ناصع ومتوازن يمنحك راحة بصرية فائقة وأناقة ملكية بدون إجهاد للعين",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 10.5.sp,
+                                    color = if (isWhiteActive) Color(0xFF475569) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 14.sp
+                                )
+                            )
+                        }
+
+                        // Activation state badge
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isWhiteActive) Color(0xFF0F172A) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(1.dp, if (isWhiteActive) Color(0xFF0F172A) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = if (isWhiteActive) "مفعل ✓" else "تفعيل",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isWhiteActive) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 11.sp
+                                ),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Tab Switcher between Solid and Gradient Presets
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    PaletteCategoryTab(
+                        title = "الألوان الأساسية الفاخرة",
+                        count = ThemePalettes.SOLID_PRESETS.size,
+                        isSelected = selectedPaletteTab == 0,
+                        accent = accentPrimary,
+                        onClick = { selectedPaletteTab = 0 },
+                        modifier = Modifier.weight(1f)
+                    )
+                    PaletteCategoryTab(
+                        title = "تدرجات أحدث الأعمال",
+                        count = ThemePalettes.GRADIENT_PRESETS.size,
+                        isSelected = selectedPaletteTab == 1,
+                        accent = accentPrimary,
+                        onClick = { selectedPaletteTab = 1 },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Display selected palette items
+                if (selectedPaletteTab == 0) {
+                    // Solid Presets
+                    val solidPresets = ThemePalettes.SOLID_PRESETS
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(solidPresets, key = { it.id }) { preset ->
+                            val isSelected = accentColor == preset.id
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.85f else 0.4f),
+                                border = BorderStroke(
+                                    if (isSelected) 2.dp else 1.dp,
+                                    if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .width(105.dp)
+                                    .clickable { onUpdateAccentColor(preset.id) }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(preset.primaryColor)
+                                            .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = if (preset.id == 8) Color(0xFF0F172A) else Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = preset.name,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Gradient Presets
+                    val gradientPresets = ThemePalettes.GRADIENT_PRESETS
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(gradientPresets, key = { it.id }) { preset ->
+                            val isSelected = accentColor == preset.id
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.85f else 0.4f),
+                                border = BorderStroke(
+                                    if (isSelected) 2.dp else 1.dp,
+                                    if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .width(135.dp)
+                                    .clickable { onUpdateAccentColor(preset.id) }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Brush.sweepGradient(preset.gradientColors))
+                                            .border(1.2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = preset.name,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -879,102 +1177,348 @@ private fun AppearanceSubPage(
             }
         }
 
-        // Solid Accent Colors
+        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.5)
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "الألوان الأساسية الصلبة:",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-
-                val solidPresets = ThemePalettes.SOLID_PRESETS
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // Header with Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(solidPresets, key = { it.id }) { preset ->
-                        val isSelected = accentColor == preset.id
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(
-                                if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            ),
-                            modifier = Modifier
-                                .width(90.dp)
-                                .clickable { onUpdateAccentColor(preset.id) }
+                            shape = CircleShape,
+                            color = accentPrimary.copy(alpha = 0.15f),
+                            modifier = Modifier.size(38.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(preset.primaryColor),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = preset.name,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) preset.primaryColor else MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    maxLines = 1
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Waves,
+                                    contentDescription = null,
+                                    tint = accentPrimary,
+                                    modifier = Modifier.size(22.dp)
                                 )
+                            }
+                        }
+
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "التموج اللوني لشريط الفوتر",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = accentPrimary
+                                ) {
+                                    Text(
+                                        text = "جديد v2.0.5",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "تحكم في سرعة مرور التموج، وسرعة ظهوره في كل دورة، ولونه",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Section A: Wave Color Selection
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "١. لون التموج اللوني:",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+
+                    val colorPresets = ThemePalettes.FOOTER_WAVE_COLOR_PRESETS
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(colorPresets, key = { it.id }) { preset ->
+                            val isSelected = footerWaveColor == preset.id
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.85f else 0.4f),
+                                border = BorderStroke(
+                                    if (isSelected) 2.dp else 1.dp,
+                                    if (isSelected) accentPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .width(115.dp)
+                                    .clickable { onUpdateFooterWaveColor(preset.id) }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(Brush.sweepGradient(preset.colors))
+                                            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = preset.name,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) accentPrimary else MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
                 }
+
+                // Section B: Wave Sweep Speed (سرعة مرورها)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "٢. سرعة مرور التموج (Sweep Speed):",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = "سرعة اجتياز الفوتر",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            WaveSettingCard(
+                                title = "هادئ وناعم",
+                                durationLabel = "بطيء (2.2s)",
+                                subtitle = "مرور انسيابي هادئ ومريح",
+                                isSelected = footerWaveSpeed == 0,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveSpeed(0) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            WaveSettingCard(
+                                title = "متوازن وطبيعي",
+                                durationLabel = "عادي (1.2s)",
+                                subtitle = "السرعة القياسية المتناسقة",
+                                isSelected = footerWaveSpeed == 1,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveSpeed(1) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            WaveSettingCard(
+                                title = "سريع وحيوي",
+                                durationLabel = "سريع (0.8s)",
+                                subtitle = "حركة رشيقة ومرحة",
+                                isSelected = footerWaveSpeed == 2,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveSpeed(2) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            WaveSettingCard(
+                                title = "خاطف وفائق",
+                                durationLabel = "فائق (0.5s)",
+                                subtitle = "وميض خاطف وسريع جداً",
+                                isSelected = footerWaveSpeed == 3,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveSpeed(3) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Section C: Wave Cycle Interval / Frequency (سرعة الظهور في كل دورة)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "٣. سرعة الظهور في كل دورة (Cycle Interval):",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = "فترة التوقف بين كل تموج",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            WaveSettingCard(
+                                title = "مستمر وفوري",
+                                durationLabel = "توقف 0.6s",
+                                subtitle = "تموج متعاقب باستمرار",
+                                isSelected = footerWaveInterval == 0,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveInterval(0) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            WaveSettingCard(
+                                title = "سريع ومتكرر",
+                                durationLabel = "توقف 1.5s",
+                                subtitle = "ظهور متكرر وبإيقاع نشط",
+                                isSelected = footerWaveInterval == 1,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveInterval(1) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            WaveSettingCard(
+                                title = "متوازن ومريح",
+                                durationLabel = "توقف 3.0s",
+                                subtitle = "الإيقاع الطبيعي المريح للعين",
+                                isSelected = footerWaveInterval == 2,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveInterval(2) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            WaveSettingCard(
+                                title = "هادئ ومتباعد",
+                                durationLabel = "توقف 5.0s",
+                                subtitle = "ظهور هادئ على فترات",
+                                isSelected = footerWaveInterval == 3,
+                                accent = accentPrimary,
+                                onClick = { onUpdateFooterWaveInterval(3) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Live Mini Footer Wave Strip
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "معاينة حية وفورية للتموج الحالي:",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    MiniFooterWavePreview(
+                        footerWaveSpeed = footerWaveSpeed,
+                        footerWaveInterval = footerWaveInterval,
+                        footerWaveColor = footerWaveColor,
+                        accentColorId = accentColor,
+                        accentPrimary = accentPrimary
+                    )
+                }
             }
         }
 
-        // Background Style Card
+        // 🎨 5. Background Style & Card Effects Card (نمط خلفية التطبيق وتأثيرات الإطارات)
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = "نمط خلفية التطبيق:",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                Column {
+                    Text(
+                        text = "نمط خلفية التطبيق",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
-                )
+                    Text(
+                        text = "اختر درجة عمق السواد أو النقاء لخلفيات الشاشات",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -982,7 +1526,7 @@ private fun AppearanceSubPage(
                 ) {
                     BackgroundStyleCard(
                         title = "الافتراضي",
-                        subtitle = "نقي",
+                        subtitle = "ناعم ونقي",
                         isSelected = backgroundStyle == 0,
                         accent = accentPrimary,
                         onClick = { onUpdateBackgroundStyle(0) },
@@ -991,7 +1535,7 @@ private fun AppearanceSubPage(
 
                     BackgroundStyleCard(
                         title = "AMOLED",
-                        subtitle = "سواد نقي",
+                        subtitle = "سواد عميق",
                         isSelected = backgroundStyle == 1,
                         accent = accentPrimary,
                         onClick = { onUpdateBackgroundStyle(1) },
@@ -999,8 +1543,8 @@ private fun AppearanceSubPage(
                     )
 
                     BackgroundStyleCard(
-                        title = "فاتح",
-                        subtitle = "أبيض ناصع",
+                        title = "أبيض ناصع",
+                        subtitle = "مريح وأنيق",
                         isSelected = backgroundStyle == 2,
                         accent = accentPrimary,
                         onClick = { onUpdateBackgroundStyle(2) },
@@ -1018,9 +1562,9 @@ private fun AppearanceSubPage(
             }
         }
 
-        // Cosmic Space Footer Aura Section
+        // 🌌 6. Legendary Cosmic Space Footer Aura Section (فضاء الفوتر الكوني)
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = if (isCosmicUnlocked) Color(0xFF0F0B1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
             border = BorderStroke(
                 1.2.dp,
@@ -1030,8 +1574,8 @@ private fun AppearanceSubPage(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1040,20 +1584,20 @@ private fun AppearanceSubPage(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         Surface(
                             shape = CircleShape,
                             color = if (isCosmicUnlocked) Color(0xFF8B5CF6).copy(alpha = 0.25f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(42.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
                                     tint = if (isCosmicUnlocked) Color(0xFFFFD700) else MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -1064,14 +1608,14 @@ private fun AppearanceSubPage(
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (isCosmicUnlocked) Color.White else MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 13.5.sp
+                                    fontSize = 14.sp
                                 )
                             )
                             Text(
                                 text = if (isCosmicUnlocked) "مفتوح ومتاح للاستخدام ✨" else "يفتح تلقائياً بعد قراءة 500 فصل 🔒",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = if (isCosmicUnlocked) Color(0xFF38BDF8) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.sp
+                                    fontSize = 11.5.sp
                                 )
                             )
                         }
@@ -1091,7 +1635,7 @@ private fun AppearanceSubPage(
                 }
 
                 // 500 Chapters Progress Bar
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val progressFraction = (totalRead / 500f).coerceIn(0f, 1f)
                     val percent = (progressFraction * 100).toInt()
                     Row(
@@ -1111,7 +1655,7 @@ private fun AppearanceSubPage(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = if (isCosmicUnlocked) Color(0xFFFFD700) else accentPrimary,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                fontSize = 11.5.sp
                             )
                         )
                     }
@@ -1136,6 +1680,507 @@ private fun AppearanceSubPage(
                     )
                 )
             }
+        }
+    }
+}
+
+/**
+ * Interactive Live Preview Studio Card showing active visual identity in real-time
+ */
+@Composable
+private fun LiveAppearanceStudioCard(
+    themeMode: Int,
+    accentPreset: com.example.ui.theme.ThemePalettePreset,
+    backgroundStyle: Int,
+    cardAnimationEnabled: Boolean,
+    footerWaveSpeed: Int,
+    footerWaveInterval: Int,
+    footerWaveColor: Int
+) {
+    val accentPrimary = accentPreset.primaryColor
+    val isWhiteTheme = accentPreset.id == 8 || accentPreset.id == 18
+
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isWhiteTheme) Color(0xFFF8FAFC) else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.5.dp,
+            Brush.linearGradient(
+                listOf(
+                    accentPrimary.copy(alpha = 0.7f),
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            )
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = accentPrimary.copy(alpha = 0.18f),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = accentPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "لوحة المعاينة التفاعلية المباشرة",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = "تفاعل فوري مع إعدادات المظهر والتموج",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = accentPrimary.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "مباشر ●",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = accentPrimary,
+                            fontSize = 10.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Interactive Mini Phone Canvas
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = when (backgroundStyle) {
+                    1 -> Color(0xFF030712)
+                    2 -> Color(0xFFFFFFFF)
+                    else -> if (themeMode == 1) Color(0xFF0F172A) else Color(0xFFF1F5F9)
+                },
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Mini Top Bar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(accentPrimary)
+                            )
+                            Text(
+                                text = "NEXUS AP",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 11.5.sp,
+                                    color = if (themeMode == 1 || backgroundStyle == 1) Color.White else Color(0xFF0F172A)
+                                )
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = accentPrimary.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = accentPreset.name,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    color = accentPrimary,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // Mini Manga Card Mockup
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (themeMode == 1 || backgroundStyle == 1) Color(0xFF1E293B) else Color.White,
+                        border = BorderStroke(
+                            1.dp,
+                            if (cardAnimationEnabled) accentPrimary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = accentPrimary.copy(alpha = 0.25f),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        tint = accentPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "سيد التنانين السماوية",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = if (themeMode == 1 || backgroundStyle == 1) Color.White else Color(0xFF0F172A)
+                                    )
+                                )
+                                Text(
+                                    text = "فصل 184 • تحديث مستمر",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Mini Interactive Bottom Navigation Footer Bar with Wave Animation
+                    MiniFooterWavePreview(
+                        footerWaveSpeed = footerWaveSpeed,
+                        footerWaveInterval = footerWaveInterval,
+                        footerWaveColor = footerWaveColor,
+                        accentColorId = accentPreset.id,
+                        accentPrimary = accentPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Animated Mini Footer Wave Bar Preview
+ */
+@Composable
+private fun MiniFooterWavePreview(
+    footerWaveSpeed: Int,
+    footerWaveInterval: Int,
+    footerWaveColor: Int,
+    accentColorId: Int,
+    accentPrimary: Color
+) {
+    val sweepDuration = remember(footerWaveSpeed) {
+        when (footerWaveSpeed) {
+            0 -> 2200
+            1 -> 1200
+            2 -> 800
+            3 -> 500
+            else -> 1200
+        }
+    }
+
+    val pauseDuration = remember(footerWaveInterval) {
+        when (footerWaveInterval) {
+            0 -> 600
+            1 -> 1500
+            2 -> 3000
+            3 -> 5000
+            else -> 3000
+        }
+    }
+
+    val totalDuration = sweepDuration + pauseDuration
+
+    val infiniteTransition = rememberInfiniteTransition(label = "mini_wave_anim")
+    val waveProgress by infiniteTransition.animateFloat(
+        initialValue = -0.3f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = totalDuration
+                -0.3f at 0
+                1.3f at sweepDuration using FastOutSlowInEasing
+                1.3f at totalDuration
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "mini_wave_sweep"
+    )
+
+    val waveAlpha by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = totalDuration
+                0.2f at 0
+                0.85f at (sweepDuration / 2)
+                0.15f at (sweepDuration - 60)
+                0f at sweepDuration
+                0f at totalDuration
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "mini_wave_alpha"
+    )
+
+    val cosmeticColors = remember(footerWaveColor, accentColorId) {
+        ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColorId)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(34.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF0F172A))
+            .border(1.dp, Color(0xFF334155), RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Wave Shimmer Canvas
+        if (waveAlpha > 0.01f) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+                val centerX = canvasWidth * waveProgress
+                val radius = canvasWidth * 0.35f
+
+                val waveBrush = Brush.radialGradient(
+                    colors = listOf(
+                        cosmeticColors.first().copy(alpha = waveAlpha * 0.9f),
+                        cosmeticColors.getOrElse(1) { cosmeticColors.first() }.copy(alpha = waveAlpha * 0.5f),
+                        Color.Transparent
+                    ),
+                    center = Offset(centerX, canvasHeight / 2),
+                    radius = radius
+                )
+                drawRect(brush = waveBrush)
+            }
+        }
+
+        // Mock Navigation Icons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MiniNavDot(active = true, accent = accentPrimary)
+            MiniNavDot(active = false, accent = accentPrimary)
+            MiniNavDot(active = false, accent = accentPrimary)
+            MiniNavDot(active = false, accent = accentPrimary)
+        }
+    }
+}
+
+@Composable
+private fun MiniNavDot(active: Boolean, accent: Color) {
+    Box(
+        modifier = Modifier
+            .size(if (active) 14.dp else 10.dp)
+            .clip(CircleShape)
+            .background(if (active) accent else Color(0xFF64748B)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LightingModeCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.85f else 0.35f),
+        border = BorderStroke(
+            if (isSelected) 2.dp else 1.dp,
+            if (isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 12.sp
+                )
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 9.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaletteCategoryTab(
+    title: String,
+    count: Int,
+    isSelected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(9.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+        border = if (isSelected) BorderStroke(1.dp, accent.copy(alpha = 0.4f)) else null,
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$title ($count)",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun WaveSettingCard(
+    title: String,
+    durationLabel: String,
+    subtitle: String,
+    isSelected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.85f else 0.35f),
+        border = BorderStroke(
+            if (isSelected) 1.8.dp else 1.dp,
+            if (isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 9.dp, horizontal = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 12.sp
+                    )
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (isSelected) accent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = durationLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 9.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

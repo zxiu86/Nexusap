@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.4"
-    const val VERSION_CODE = 44
+    const val VERSION_NAME = "2.0.5"
+    const val VERSION_CODE = 45
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.4 SUPER"
+     * Short version string: "v2.0.5 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 44"
+     * Build identifier: "Build 45"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.4 SUPER (Build 44) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.5 SUPER (Build 45) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,11 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "تكيّف ديناميكي كامل وتلقائي لنافذة تسجيل الدخول/إنشاء الحساب مع الثيم والألوان التجميلية المختارة في الإعدادات.",
-        "أنيميشن تموج سريع وانسيابي على شريط الفوتر السفلي يظهر ويختفي دورياً كل 3 ثوانٍ متناغماً مع الألوان التجميلية للمستخدم.",
-        "تبسيط وتجميل الهيدر العلوي بإزالة زر إعادة التحميل مع الإبقاء التام على ميزة السحب للأسفل للتحديث (Pull-to-Refresh).",
-        "ترقية إصدار التطبيق إلى 2.0.4 SUPER مع تحسينات في استقرار الواجهة والأداء وسرعة الاستجابة.",
-        "تقسيم صفحة الإعدادات بالكامل إلى صفحات فرعية وتصنيفات داخلية عصرية وفاخرة عالمياً لتجربة تحكم سلسة.",
-        "لوحة إدارة وتحكم المشرفين لمراجعة البلاغات والطلبات مع المزامنة السحابية وباقة الألوان التجميلية المتنوعة."
+        "إمكانية تخصيص سرعة مرور التموج اللوني وسرعة ظهوره في كل دورة لشريط الفوتر السفلي بحرية تامة.",
+        "إمكانية اختيار لون التموج اللوني لشريط الفوتر مع تشكيلة ألوان نيون وكريستالية متوهجة.",
+        "إضافة سمة اللون الأبيض الأنيق والمريح للتطبيق لتجربة قراءة وتصفح نقية ومريحة للعين.",
+        "إعادة تصميم شاملة وأكثر ديناميكية لصفحة تخصيص المظهر في الإعدادات مع لوحة معاينة حية وتوزيع أرحب للبطاقات.",
+        "ترقية إصدار التطبيق إلى 2.0.5 SUPER مع تحسينات في استقرار الأداء وسلاسة الحركات والتنقل."
     )
 }

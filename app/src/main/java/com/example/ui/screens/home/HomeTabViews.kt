@@ -214,24 +214,42 @@ fun NexusBottomFooterBar(
     downloadedCount: Int = 0,
     hasUpdate: Boolean,
     accentColor: Int = 0,
+    footerWaveSpeed: Int = 1,
+    footerWaveInterval: Int = 2,
+    footerWaveColor: Int = 0,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accentPrimary = MaterialTheme.colorScheme.primary
     val accentSecondary = MaterialTheme.colorScheme.secondary
 
-    // Resolve cosmetic palette selected by user in settings
-    val preset = remember(accentColor) { ThemePalettes.getPresetById(accentColor) }
-    val cosmeticColors = remember(preset) {
-        if (preset.gradientColors.size > 1) {
-            preset.gradientColors
-        } else {
-            listOf(preset.primaryColor, preset.secondaryColor, preset.primaryColor)
+    // Resolve cosmetic wave palette selected by user in settings
+    val cosmeticColors = remember(footerWaveColor, accentColor) {
+        ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColor)
+    }
+
+    // Dynamic Ripple Wave Animation (تخصيص سرعة مرور التموج وسرعة ظهوره في كل دورة ولونه):
+    val sweepDuration = remember(footerWaveSpeed) {
+        when (footerWaveSpeed) {
+            0 -> 2200 // هادئ وناعم
+            1 -> 1200 // متوازن وطبيعي
+            2 -> 800  // سريع وحيوي
+            3 -> 500  // خاطف وفائق
+            else -> 1200
         }
     }
 
-    // Fast Ripple Wave Animation:
-    // Wave sweeps fast across footer in 1200ms, then disappears completely for 3000ms (3 full seconds), then sweeps again!
+    val pauseDuration = remember(footerWaveInterval) {
+        when (footerWaveInterval) {
+            0 -> 600  // مستمر وفوري
+            1 -> 1500 // سريع ومتكرر
+            2 -> 3000 // متوازن ومريح
+            3 -> 5000 // هادئ ومتباعد
+            else -> 3000
+        }
+    }
+
+    val totalDuration = sweepDuration + pauseDuration
     val infiniteTransition = rememberInfiniteTransition(label = "footer_wave_cycle_transition")
 
     val waveProgress by infiniteTransition.animateFloat(
@@ -239,10 +257,10 @@ fun NexusBottomFooterBar(
         targetValue = 1.35f,
         animationSpec = infiniteRepeatable(
             animation = keyframes {
-                durationMillis = 4200
+                durationMillis = totalDuration
                 -0.35f at 0 using FastOutSlowInEasing
-                1.35f at 1200
-                1.35f at 4200 // Dormant during the 3 seconds pause
+                1.35f at sweepDuration
+                1.35f at totalDuration // Dormant during the pause interval
             },
             repeatMode = RepeatMode.Restart
         ),
@@ -254,12 +272,12 @@ fun NexusBottomFooterBar(
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
             animation = keyframes {
-                durationMillis = 4200
+                durationMillis = totalDuration
                 0.0f at 0
-                0.90f at 160
-                0.90f at 1040
-                0.0f at 1200 // Completely disappears!
-                0.0f at 4200 // Remains hidden for 3000ms (3 seconds)
+                0.90f at (sweepDuration * 0.12f).toInt()
+                0.90f at (sweepDuration * 0.88f).toInt()
+                0.0f at sweepDuration
+                0.0f at totalDuration // Remains hidden until next cycle
             },
             repeatMode = RepeatMode.Restart
         ),
