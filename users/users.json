@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "app": "Nexus Manga",
+    "version": "2.0.1",
+    "format": "nexus_user_database",
+    "createdAt": 1790170956249,
+    "updatedAt": 1790171027739
+  },
+  "users": {
+    "zxiuzaid": {
+      "uid": "admin_zxiuzaid_master",
+      "username": "zxiuzaid",
+      "displayName": "zxiuzaid (المشرف العام)",
+      "email": "alsaid66900@gmail.com",
+      "salt": "nexus_admin_salt_2026",
+      "passHash": "dabe80201f52cc57ddd29a1be9bef2bfdd47c1bceb32361b5ba04f55a21ed71a",
+      "isAdmin": true,
+      "createdAt": 1790170956250,
+      "data": {
+        "favorites": [],
+        "readLater": [],
+        "history": [
+          {
+            "mangaId": "demonic-emperor",
+            "mangaTitle": "demonic-emperor",
+            "mangaCover": "https:\/\/olympustaff.com\/images\/manga\/11809d13c563e62b8f74fea18dbe2417.jpg",
+            "chapterNumber": 906,
+            "chapterTitle": "ملامح الخيبة والانكسار!!",
+            "pageNumber": 2,
+            "totalPages": 4,
+            "timestamp": 1788665948431
+          },
+          {
+            "mangaId": "mharaty-alkamn-la-tkhr",
+            "mangaTitle": "My Passive Skills Are Invincible",
+            "mangaCover": "https:\/\/olympustaff.com\/images\/manga\/9681151271480138089.jpg",
+            "chapterNumber": 3,
+            "chapterTitle": "الفصل رقم 3",
+            "pageNumber": 5,
+            "totalPages": 11,
+            "timestamp": 1788532185797
+          }
+        ],
+        "readChapters": {
+          "mharaty-alkamn-la-tkhr": [
+            1,
+            2,
+            3
+          ],
+          "demonic-emperor": [
+            1,
+            2,
+            3,
+            904,
+            906
+          ]
+        },
+        "lastSynced": 1790171027739
+      }
+    }
+  }
+}
