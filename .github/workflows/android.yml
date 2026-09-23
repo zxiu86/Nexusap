@@ -53,6 +53,10 @@ jobs:
           echo "Permanent release.keystore verified successfully."
 
       - name: Build Release APK
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
         run: |
           ./gradlew assembleRelease --stacktrace || gradle assembleRelease
 

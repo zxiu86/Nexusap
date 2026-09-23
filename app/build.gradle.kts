@@ -9,6 +9,10 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+fun javaString(value: String?): String {
+  return "\"${(value ?: "").replace("\\", "\\\\").replace("\"", "\\\"")}\""
+}
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -21,6 +25,23 @@ android {
     versionName = "2.0.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildConfigField(
+      "String",
+      "GITHUB_BRANCH",
+      javaString(System.getenv("GITHUB_BRANCH") ?: "main")
+    )
+    buildConfigField(
+      "String",
+      "GITHUB_OWNER",
+      javaString(System.getenv("GITHUB_OWNER") ?: "zxiu86")
+    )
+    buildConfigField(
+      "String",
+      "GITHUB_REPO",
+      javaString(System.getenv("GITHUB_REPO") ?: "Nexusap")
+    )
+    buildConfigField("String", "GITHUB_TOKEN", javaString(""))
   }
 
   signingConfigs {
@@ -90,6 +111,10 @@ secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
+  ignoreList.add("GITHUB_BRANCH")
+  ignoreList.add("GITHUB_OWNER")
+  ignoreList.add("GITHUB_REPO")
+  ignoreList.add("GITHUB_TOKEN")
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
