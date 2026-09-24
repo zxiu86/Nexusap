@@ -38,7 +38,8 @@ class ReportsRepository(
     companion object {
         private const val TAG = "NexusReportsRepo"
         private const val CACHE_FILE_NAME = "nexus_reports_cache.json"
-        private const val REPORTS_GITHUB_PATH = "data/reports.json"
+        private const val REPORTS_GITHUB_PATH = "report.json"
+        private const val FALLBACK_REPORTS_GITHUB_PATH = "data/reports.json"
         const val CACHE_DELAY_MILLIS = 30 * 60 * 1000L // 30 minutes
     }
 
@@ -211,7 +212,7 @@ class ReportsRepository(
     }
 
     // ==========================================
-    // GitHub data/reports.json Sync
+    // GitHub report.json Sync
     // ==========================================
 
     private suspend fun fetchReportsFromGitHubRaw(): List<UserReport> = withContext(Dispatchers.IO) {
@@ -220,10 +221,26 @@ class ReportsRepository(
             val repo = GitHubNetworkModule.getDataRepo()
             val branch = GitHubNetworkModule.getConfiguredBranch()
 
+            // 1. Primary: zxiu86/Data/report.json
             val rawUrl = "https://raw.githubusercontent.com/$owner/$repo/$branch/$REPORTS_GITHUB_PATH"
             val json = GitHubNetworkModule.fetchDirectRaw(rawUrl, forceFresh = true)
-            if (!json.isNullOrBlank()) {
-                return@withContext jsonAdapter.fromJson(json) ?: emptyList()
+            if (!json.isNullOrBlank() && json.trim().startsWith("[")) {
+                val reports = jsonAdapter.fromJson(json)
+                if (!reports.isNullOrEmpty()) {
+                    return@withContext reports
+                }
+            }
+
+            // 2. Fallback to data/reports.json if report.json was not yet created or empty
+            val fallbackUrl = "https://raw.githubusercontent.com/$owner/$repo/$branch/$FALLBACK_REPORTS_GITHUB_PATH"
+            val fallbackJson = GitHubNetworkModule.fetchDirectRaw(fallbackUrl, forceFresh = true)
+            if (!fallbackJson.isNullOrBlank() && fallbackJson.trim().startsWith("[")) {
+                val fallbackReports = jsonAdapter.fromJson(fallbackJson)
+                if (!fallbackReports.isNullOrEmpty()) {
+                    // Auto-migrate to report.json on GitHub
+                    writeReportsToGitHub(fallbackReports)
+                    return@withContext fallbackReports
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "fetchReportsFromGitHubRaw error: ${e.message}")
@@ -236,7 +253,7 @@ class ReportsRepository(
         val res = GitHubNetworkModule.pushOrUpdateFileToGitHub(
             path = REPORTS_GITHUB_PATH,
             contentString = jsonStr,
-            commitMessage = "[Nexus 2.0.1] Sync reports database (${reports.size} items)"
+            commitMessage = "[Nexus 2.0.8] Sync reports database (${reports.size} items)"
         )
         if (res.isSuccess) {
             Log.d(TAG, "Successfully committed reports to GitHub: $REPORTS_GITHUB_PATH")
@@ -258,9 +275,9 @@ class ReportsRepository(
             val list = _allIncomingReportsFlow.value
             val success = writeReportsToGitHub(list)
             if (success) {
-                Result.success("تمت مزامنة البلاغات بنجاح مع GitHub (${list.size} بلاغ).")
+                Result.success("تمت مزامنة البلاغات بنجاح مع GitHub في $REPORTS_GITHUB_PATH (${list.size} بلاغ).")
             } else {
-                Result.failure(Exception("فشل إرسال ملف data/reports.json إلى GitHub. تحقق من صلاحية الرمز."))
+                Result.failure(Exception("فشل إرسال ملف $REPORTS_GITHUB_PATH إلى GitHub. تحقق من صلاحية الرمز."))
             }
         } catch (e: Exception) {
             Result.failure(e)

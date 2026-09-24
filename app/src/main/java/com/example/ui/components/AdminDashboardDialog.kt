@@ -701,7 +701,7 @@ fun AdminDashboardDialog(
                             }
 
                             Text(
-                                text = "المسار الهدف: https://github.com/zxiu86/Data/tree/main\nيتم حفظ بيانات المستخدمين تلقائياً في user/user.json والبلاغات في data/reports.json.",
+                                text = "المسار الهدف: https://github.com/zxiu86/Data/tree/main\nيتم حفظ بيانات المستخدمين تلقائياً في user/user.json والبلاغات في report.json.",
                                 fontSize = 11.sp,
                                 color = TextSecondary,
                                 lineHeight = 16.sp

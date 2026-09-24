@@ -86,6 +86,14 @@ class AuthRepository(private val context: Context) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     init {
+        // Clean up legacy users directory if it exists to strictly follow single user/user.json specification
+        try {
+            val legacyUsersDir = File(context.filesDir, "users")
+            if (legacyUsersDir.exists()) {
+                legacyUsersDir.deleteRecursively()
+            }
+        } catch (_: Exception) {}
+
         ensureUserDirectoryAndFile()
         restoreCachedUser()
         coroutineScope.launch {
@@ -244,7 +252,8 @@ class AuthRepository(private val context: Context) {
     }
 
     // =========================================================================
-    // Remote GitHub Sync for user/user.json & users/users.json
+    // =========================================================================
+    // Remote GitHub Sync exclusively for user/user.json
     // =========================================================================
 
     private suspend fun syncWithRemoteGitHubUserFileIfAvailable() = withContext(Dispatchers.IO) {
@@ -253,22 +262,16 @@ class AuthRepository(private val context: Context) {
             val repo = GitHubNetworkModule.getDataRepo()
             val branch = GitHubNetworkModule.getConfiguredBranch()
 
-            // 1. Try direct raw URLs first (faster and bypasses rate limits)
-            val directRawUrls = listOf(
-                "https://raw.githubusercontent.com/$owner/$repo/$branch/$GITHUB_USER_FILE_PATH",
-                "https://raw.githubusercontent.com/$owner/$repo/$branch/users/users.json"
-            )
+            // Direct raw URL for user/user.json (fast and bypasses rate limits)
+            val primaryRawUrl = "https://raw.githubusercontent.com/$owner/$repo/$branch/$GITHUB_USER_FILE_PATH"
 
             var remoteContent: String? = null
-            for (rawUrl in directRawUrls) {
-                val fetched = GitHubNetworkModule.fetchDirectRaw(rawUrl, forceFresh = true)
-                if (!fetched.isNullOrBlank() && fetched.trim().startsWith("{")) {
-                    remoteContent = fetched
-                    break
-                }
+            val fetched = GitHubNetworkModule.fetchDirectRaw(primaryRawUrl, forceFresh = true)
+            if (!fetched.isNullOrBlank() && fetched.trim().startsWith("{")) {
+                remoteContent = fetched
             }
 
-            // 2. If raw not found, try GitHub API
+            // If raw not found, try GitHub API
             if (remoteContent == null) {
                 val response = GitHubNetworkModule.apiService.getContentRaw(owner, repo, GITHUB_USER_FILE_PATH, branch)
                 if (response.isSuccessful && response.body() != null) {
@@ -307,26 +310,19 @@ class AuthRepository(private val context: Context) {
 
         try {
             val jsonStr = json.toString(2)
-            val commitMsg = "[Nexus 2.0.1] Update user accounts database"
+            val commitMsg = "[Nexus 2.0.8] Update user accounts database"
 
-            // Primary path: user/user.json
-            val res1 = GitHubNetworkModule.pushOrUpdateFileToGitHub(
+            // Target path: user/user.json
+            val res = GitHubNetworkModule.pushOrUpdateFileToGitHub(
                 path = GITHUB_USER_FILE_PATH,
                 contentString = jsonStr,
                 commitMessage = commitMsg
             )
 
-            // Secondary path: users/users.json for dual compatibility
-            val res2 = GitHubNetworkModule.pushOrUpdateFileToGitHub(
-                path = "users/users.json",
-                contentString = jsonStr,
-                commitMessage = commitMsg
-            )
-
-            if (res1.isSuccess || res2.isSuccess) {
-                Log.d(TAG, "Successfully committed user accounts to GitHub repo")
+            if (res.isSuccess) {
+                Log.d(TAG, "Successfully committed user accounts to GitHub repo at $GITHUB_USER_FILE_PATH")
             } else {
-                Log.w(TAG, "Notice: GitHub push for user/user.json: ${res1.exceptionOrNull()?.message}")
+                Log.w(TAG, "Notice: GitHub push for user/user.json: ${res.exceptionOrNull()?.message}")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Remote GitHub push failed: ${e.message}")
@@ -343,7 +339,7 @@ class AuthRepository(private val context: Context) {
             val localJson = getUsersDatabase()
             val usersCount = localJson.optJSONObject("users")?.length() ?: 0
             val jsonStr = localJson.toString(2)
-            val commitMsg = "[Nexus 2.0.1] Force sync user database ($usersCount users)"
+            val commitMsg = "[Nexus 2.0.8] Force sync user database ($usersCount users)"
 
             val res = GitHubNetworkModule.pushOrUpdateFileToGitHub(
                 path = GITHUB_USER_FILE_PATH,
@@ -351,15 +347,8 @@ class AuthRepository(private val context: Context) {
                 commitMessage = commitMsg
             )
 
-            // Also mirror to users/users.json
-            GitHubNetworkModule.pushOrUpdateFileToGitHub(
-                path = "users/users.json",
-                contentString = jsonStr,
-                commitMessage = commitMsg
-            )
-
             if (res.isSuccess) {
-                Result.success("تمت مزامنة بيانات المستخدمين بنجاح مع GitHub ($usersCount مستخدمين مسجلين).")
+                Result.success("تمت مزامنة بيانات المستخدمين بنجاح مع GitHub في user/user.json ($usersCount مستخدمين مسجلين).")
             } else {
                 Result.failure(res.exceptionOrNull() ?: Exception("فشل رفع ملف user/user.json إلى GitHub"))
             }

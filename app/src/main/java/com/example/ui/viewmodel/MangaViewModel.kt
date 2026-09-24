@@ -1324,9 +1324,9 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _gitHubSyncStatus.value = "جارِ المزامنة الشاملة مع مستودع GitHub..."
             try {
-                // 1. Sync users database (user/user.json & users/users.json)
+                // 1. Sync users database (user/user.json exclusively)
                 val userRes = authRepository.forceSyncUsersWithGitHub()
-                // 2. Sync reports database (data/reports.json)
+                // 2. Sync reports database (report.json)
                 val repRes = reportsRepository.forceSyncReportsWithGitHub()
                 // 3. Sync manga catalog
                 syncFromCloudAndMerge()

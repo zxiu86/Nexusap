@@ -86,6 +86,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -1922,111 +1923,113 @@ private fun MiniFooterWavePreview(
     accentColorId: Int,
     accentPrimary: Color
 ) {
-    val sweepDuration = remember(footerWaveSpeed) {
-        when (footerWaveSpeed) {
-            0 -> 2200
-            1 -> 1200
-            2 -> 800
-            3 -> 500
-            else -> 1200
-        }
-    }
-
-    val pauseDuration = remember(footerWaveInterval) {
-        when (footerWaveInterval) {
-            0 -> 600
-            1 -> 1500
-            2 -> 3000
-            3 -> 5000
-            else -> 3000
-        }
-    }
-
-    val totalDuration = sweepDuration + pauseDuration
-
-    val infiniteTransition = rememberInfiniteTransition(label = "mini_wave_anim")
-    val waveProgress by infiniteTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = totalDuration
-                -0.3f at 0
-                1.3f at sweepDuration using FastOutSlowInEasing
-                1.3f at totalDuration
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "mini_wave_sweep"
-    )
-
-    val waveAlpha by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = totalDuration
-                0.2f at 0
-                0.85f at (sweepDuration / 2)
-                0.15f at (sweepDuration - 60)
-                0f at sweepDuration
-                0f at totalDuration
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "mini_wave_alpha"
-    )
-
-    val cosmeticColors = remember(footerWaveColor, accentColorId) {
-        val resolved = ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColorId)
-        if (resolved.size >= 2) resolved else listOf(accentPrimary, accentPrimary.copy(alpha = 0.5f))
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(34.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF0F172A))
-            .border(1.dp, Color(0xFF334155), RoundedCornerShape(10.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        // Wave Shimmer Canvas with safe dimensions and horizontal gradient
-        if (waveAlpha > 0.01f) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val canvasWidth = size.width
-                val canvasHeight = size.height
-                if (canvasWidth > 0f && canvasHeight > 0f) {
-                    val centerX = canvasWidth * waveProgress
-                    val waveWidth = canvasWidth * 0.35f
-                    val waveBrush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            cosmeticColors.first().copy(alpha = 0.35f * waveAlpha),
-                            cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.85f * waveAlpha),
-                            cosmeticColors.last().copy(alpha = 0.35f * waveAlpha),
-                            Color.Transparent
-                        ),
-                        startX = centerX - waveWidth,
-                        endX = centerX + waveWidth
-                    )
-                    drawRect(brush = waveBrush)
-                }
+    key(footerWaveSpeed, footerWaveInterval, footerWaveColor, accentColorId) {
+        val sweepDuration = remember(footerWaveSpeed) {
+            when (footerWaveSpeed) {
+                0 -> 2200
+                1 -> 1200
+                2 -> 800
+                3 -> 500
+                else -> 1200
             }
         }
 
-        // Mock Navigation Icons
-        Row(
+        val pauseDuration = remember(footerWaveInterval) {
+            when (footerWaveInterval) {
+                0 -> 600
+                1 -> 1500
+                2 -> 3000
+                3 -> 5000
+                else -> 3000
+            }
+        }
+
+        val totalDuration = sweepDuration + pauseDuration
+
+        val infiniteTransition = rememberInfiniteTransition(label = "mini_wave_anim")
+        val waveProgress by infiniteTransition.animateFloat(
+            initialValue = -0.3f,
+            targetValue = 1.3f,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = totalDuration
+                    -0.3f at 0
+                    1.3f at sweepDuration using FastOutSlowInEasing
+                    1.3f at totalDuration
+                },
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "mini_wave_sweep"
+        )
+
+        val waveAlpha by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = totalDuration
+                    0.2f at 0
+                    0.85f at (sweepDuration / 2)
+                    0.15f at (sweepDuration - 60)
+                    0f at sweepDuration
+                    0f at totalDuration
+                },
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "mini_wave_alpha"
+        )
+
+        val cosmeticColors = remember(footerWaveColor, accentColorId) {
+            val resolved = ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColorId)
+            if (resolved.size >= 2) resolved else listOf(accentPrimary, accentPrimary.copy(alpha = 0.5f))
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .height(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFF0F172A))
+                .border(1.dp, Color(0xFF334155), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
         ) {
-            MiniNavDot(active = true, accent = accentPrimary)
-            MiniNavDot(active = false, accent = accentPrimary)
-            MiniNavDot(active = false, accent = accentPrimary)
-            MiniNavDot(active = false, accent = accentPrimary)
+            // Wave Shimmer Canvas with safe dimensions and horizontal gradient
+            if (waveAlpha > 0.01f) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val canvasWidth = size.width
+                    val canvasHeight = size.height
+                    if (canvasWidth > 0f && canvasHeight > 0f) {
+                        val centerX = canvasWidth * waveProgress
+                        val waveWidth = canvasWidth * 0.35f
+                        val waveBrush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                cosmeticColors.first().copy(alpha = 0.35f * waveAlpha),
+                                cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.85f * waveAlpha),
+                                cosmeticColors.last().copy(alpha = 0.35f * waveAlpha),
+                                Color.Transparent
+                            ),
+                            startX = centerX - waveWidth,
+                            endX = centerX + waveWidth
+                        )
+                        drawRect(brush = waveBrush)
+                    }
+                }
+            }
+
+            // Mock Navigation Icons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MiniNavDot(active = true, accent = accentPrimary)
+                MiniNavDot(active = false, accent = accentPrimary)
+                MiniNavDot(active = false, accent = accentPrimary)
+                MiniNavDot(active = false, accent = accentPrimary)
+            }
         }
     }
 }

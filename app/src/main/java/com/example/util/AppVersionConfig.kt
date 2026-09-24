@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.7"
-    const val VERSION_CODE = 47
+    const val VERSION_NAME = "2.0.8"
+    const val VERSION_CODE = 48
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.7 SUPER"
+     * Short version string: "v2.0.8 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 47"
+     * Build identifier: "Build 48"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.7 SUPER (Build 47) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.8 SUPER (Build 48) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,9 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "إصلاح جذري لمشكلة الاتصال بمستودع البيانات zxiu86/Data/data وتأكيد استقرار جلب كافة الأعمال والفصول.",
-        "تسريع استجابة تحميل قائمة المانجا والأعمال لتكون فورية بدون تأخير بفضل المعالجة المجمعة الذكية.",
-        "مزامنة موحدة ومتكاملة مع مستودع GitHub الرئيسي (zxiu86/Data) تشمل المستخدمين (user/) والمانجا والبلاغات (data/).",
-        "معالجة جذرية للتعليق والتحميل البطيء بفضل تحديد معدل التزامن (Concurrency Limiting).",
-        "ترقية إصدار التطبيق رسمياً إلى 2.0.7 SUPER داخلياً وخارجياً لضمان أعلى مستويات الكفاءة والاستقرار."
+        "تحديث مسار قراءة وتحميل بيانات المستخدمين حصراً من مستودع البيانات zxiu86/Data/user/user.json وإلغاء إنشاء ومزامنة ملف users/users.json نهائياً.",
+        "تحديث قراءة وتحميل البلاغات من مستودع zxiu86/Data/report.json مع دعم الترحيل السلس والتلقائي للبلاغات.",
+        "تطبيق إعدادات تخصيص مظهر شعاع وتموج الفوتر فورياً في شريط التنقل ولوحة المعاينة دون الحاجة لإغلاق أو إعادة تشغيل التطبيق.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.0.8 داخلياً وخارجياً لضمان أعلى مستويات الكفاءة والاستقرار."
     )
 }

@@ -145,6 +145,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -200,6 +201,149 @@ import com.example.ui.viewmodel.HomeUiState
 import com.example.util.AppVersionConfig
 
 /**
+ * Reactive animated layer that draws the wave/beam across the bottom footer.
+ * Wrapped in `key` so that changes to speed, interval, wave color, or theme accent color
+ * are instantly and dynamically re-calculated and visible without restarting the app.
+ */
+@Composable
+fun FooterWaveAnimationLayer(
+    footerWaveSpeed: Int,
+    footerWaveInterval: Int,
+    footerWaveColor: Int,
+    accentColor: Int,
+    modifier: Modifier = Modifier
+) {
+    key(footerWaveSpeed, footerWaveInterval, footerWaveColor, accentColor) {
+        val cosmeticColors = remember(footerWaveColor, accentColor) {
+            ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColor)
+        }
+
+        val sweepDuration = remember(footerWaveSpeed) {
+            when (footerWaveSpeed) {
+                0 -> 2200 // هادئ وناعم
+                1 -> 1200 // متوازن وطبيعي
+                2 -> 800  // سريع وحيوي
+                3 -> 500  // خاطف وفائق
+                else -> 1200
+            }
+        }
+
+        val pauseDuration = remember(footerWaveInterval) {
+            when (footerWaveInterval) {
+                0 -> 600  // مستمر وفوري
+                1 -> 1500 // سريع ومتكرر
+                2 -> 3000 // متوازن ومريح
+                3 -> 5000 // هادئ ومتباعد
+                else -> 3000
+            }
+        }
+
+        val totalDuration = sweepDuration + pauseDuration
+        val infiniteTransition = rememberInfiniteTransition(label = "footer_wave_cycle_transition")
+
+        val waveProgress by infiniteTransition.animateFloat(
+            initialValue = -0.35f,
+            targetValue = 1.35f,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = totalDuration
+                    -0.35f at 0 using FastOutSlowInEasing
+                    1.35f at sweepDuration
+                    1.35f at totalDuration
+                },
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "footer_wave_progress"
+        )
+
+        val waveAlpha by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = keyframes {
+                    durationMillis = totalDuration
+                    0.0f at 0
+                    0.90f at (sweepDuration * 0.12f).toInt()
+                    0.90f at (sweepDuration * 0.88f).toInt()
+                    0.0f at sweepDuration
+                    0.0f at totalDuration
+                },
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "footer_wave_alpha"
+        )
+
+        if (waveAlpha > 0.01f) {
+            Canvas(
+                modifier = modifier.clip(RoundedCornerShape(24.dp))
+            ) {
+                val canvasWidth = size.width
+                val canvasHeight = size.height
+                val centerX = canvasWidth * waveProgress
+                val waveWidth = canvasWidth * 0.45f
+
+                // 1. Radiant luminous background wave wash
+                val washBrush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        cosmeticColors.first().copy(alpha = 0.22f * waveAlpha),
+                        cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.40f * waveAlpha),
+                        cosmeticColors.last().copy(alpha = 0.22f * waveAlpha),
+                        Color.Transparent
+                    ),
+                    startX = centerX - waveWidth,
+                    endX = centerX + waveWidth
+                )
+                drawRect(brush = washBrush)
+
+                // 2. High-vibrance top-border shimmer crest line
+                val crestBrush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        cosmeticColors.first().copy(alpha = 0.70f * waveAlpha),
+                        Color.White.copy(alpha = 0.90f * waveAlpha),
+                        cosmeticColors.last().copy(alpha = 0.70f * waveAlpha),
+                        Color.Transparent
+                    ),
+                    startX = centerX - waveWidth * 0.65f,
+                    endX = centerX + waveWidth * 0.65f
+                )
+                drawLine(
+                    brush = crestBrush,
+                    start = Offset(centerX - waveWidth * 0.65f, 1.dp.toPx()),
+                    end = Offset(centerX + waveWidth * 0.65f, 1.dp.toPx()),
+                    strokeWidth = 2.5.dp.toPx()
+                )
+
+                // 3. Fluid sinusoidal wave curve ripple across footer
+                val wavePath = Path()
+                val segments = 32
+                val waveLength = waveWidth * 1.35f
+                val startX = centerX - waveLength / 2
+                val amplitude = 5.5.dp.toPx() * waveAlpha
+                val midY = canvasHeight * 0.5f
+
+                for (i in 0..segments) {
+                    val progress = i.toFloat() / segments
+                    val px = startX + progress * waveLength
+                    val py = midY + sin(progress * 2 * Math.PI.toFloat()) * amplitude
+                    if (i == 0) wavePath.moveTo(px, py) else wavePath.lineTo(px, py)
+                }
+
+                drawPath(
+                    path = wavePath,
+                    brush = crestBrush,
+                    style = Stroke(
+                        width = 1.8.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                )
+            }
+        }
+    }
+}
+
+/**
  * Modern Nexus Bottom Footer Navigation Bar:
  * - Tab 0: الرئيسية (Home)
  * - Tab 1: البحث (Search)
@@ -222,67 +366,6 @@ fun NexusBottomFooterBar(
 ) {
     val accentPrimary = MaterialTheme.colorScheme.primary
     val accentSecondary = MaterialTheme.colorScheme.secondary
-
-    // Resolve cosmetic wave palette selected by user in settings
-    val cosmeticColors = remember(footerWaveColor, accentColor) {
-        ThemePalettes.resolveFooterWaveColors(footerWaveColor, accentColor)
-    }
-
-    // Dynamic Ripple Wave Animation (تخصيص سرعة مرور التموج وسرعة ظهوره في كل دورة ولونه):
-    val sweepDuration = remember(footerWaveSpeed) {
-        when (footerWaveSpeed) {
-            0 -> 2200 // هادئ وناعم
-            1 -> 1200 // متوازن وطبيعي
-            2 -> 800  // سريع وحيوي
-            3 -> 500  // خاطف وفائق
-            else -> 1200
-        }
-    }
-
-    val pauseDuration = remember(footerWaveInterval) {
-        when (footerWaveInterval) {
-            0 -> 600  // مستمر وفوري
-            1 -> 1500 // سريع ومتكرر
-            2 -> 3000 // متوازن ومريح
-            3 -> 5000 // هادئ ومتباعد
-            else -> 3000
-        }
-    }
-
-    val totalDuration = sweepDuration + pauseDuration
-    val infiniteTransition = rememberInfiniteTransition(label = "footer_wave_cycle_transition")
-
-    val waveProgress by infiniteTransition.animateFloat(
-        initialValue = -0.35f,
-        targetValue = 1.35f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = totalDuration
-                -0.35f at 0 using FastOutSlowInEasing
-                1.35f at sweepDuration
-                1.35f at totalDuration // Dormant during the pause interval
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "footer_wave_progress"
-    )
-
-    val waveAlpha by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = totalDuration
-                0.0f at 0
-                0.90f at (sweepDuration * 0.12f).toInt()
-                0.90f at (sweepDuration * 0.88f).toInt()
-                0.0f at sweepDuration
-                0.0f at totalDuration // Remains hidden until next cycle
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "footer_wave_alpha"
-    )
 
     Box(
         modifier = modifier
@@ -309,76 +392,14 @@ fun NexusBottomFooterBar(
                 .clip(RoundedCornerShape(24.dp))
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
-                // 🌊 Fast cosmetic ripple wave layer (تموج تجميلي سريع يظهر ثم يختفي 3 ثوانٍ ويعاود الظهور)
-                if (waveAlpha > 0.01f) {
-                    Canvas(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(RoundedCornerShape(24.dp))
-                    ) {
-                        val canvasWidth = size.width
-                        val canvasHeight = size.height
-                        val centerX = canvasWidth * waveProgress
-                        val waveWidth = canvasWidth * 0.45f
-
-                        // 1. Radiant luminous background wave wash
-                        val washBrush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                cosmeticColors.first().copy(alpha = 0.22f * waveAlpha),
-                                cosmeticColors[cosmeticColors.size / 2].copy(alpha = 0.40f * waveAlpha),
-                                cosmeticColors.last().copy(alpha = 0.22f * waveAlpha),
-                                Color.Transparent
-                            ),
-                            startX = centerX - waveWidth,
-                            endX = centerX + waveWidth
-                        )
-                        drawRect(brush = washBrush)
-
-                        // 2. High-vibrance top-border shimmer crest line
-                        val crestBrush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                cosmeticColors.first().copy(alpha = 0.70f * waveAlpha),
-                                Color.White.copy(alpha = 0.90f * waveAlpha),
-                                cosmeticColors.last().copy(alpha = 0.70f * waveAlpha),
-                                Color.Transparent
-                            ),
-                            startX = centerX - waveWidth * 0.65f,
-                            endX = centerX + waveWidth * 0.65f
-                        )
-                        drawLine(
-                            brush = crestBrush,
-                            start = Offset(centerX - waveWidth * 0.65f, 1.dp.toPx()),
-                            end = Offset(centerX + waveWidth * 0.65f, 1.dp.toPx()),
-                            strokeWidth = 2.5.dp.toPx()
-                        )
-
-                        // 3. Fluid sinusoidal wave curve ripple across footer
-                        val wavePath = Path()
-                        val segments = 32
-                        val waveLength = waveWidth * 1.35f
-                        val startX = centerX - waveLength / 2
-                        val amplitude = 5.5.dp.toPx() * waveAlpha
-                        val midY = canvasHeight * 0.5f
-
-                        for (i in 0..segments) {
-                            val progress = i.toFloat() / segments
-                            val px = startX + progress * waveLength
-                            val py = midY + sin(progress * 2 * Math.PI.toFloat()) * amplitude
-                            if (i == 0) wavePath.moveTo(px, py) else wavePath.lineTo(px, py)
-                        }
-
-                        drawPath(
-                            path = wavePath,
-                            brush = crestBrush,
-                            style = Stroke(
-                                width = 1.8.dp.toPx(),
-                                cap = StrokeCap.Round
-                            )
-                        )
-                    }
-                }
+                // 🌊 Fast cosmetic ripple wave layer (تطبيق مباشر وفوري لكافة إعدادات السرعة واللون والتكرار)
+                FooterWaveAnimationLayer(
+                    footerWaveSpeed = footerWaveSpeed,
+                    footerWaveInterval = footerWaveInterval,
+                    footerWaveColor = footerWaveColor,
+                    accentColor = accentColor,
+                    modifier = Modifier.matchParentSize()
+                )
 
                 Row(
                     modifier = Modifier
