@@ -559,6 +559,7 @@ fun HomeScreen(
                         HistoryTabContent(
                             historyList = uiState.readingHistory,
                             onContinueReading = { mangaId, chNum -> onChapterClick(mangaId, chNum) },
+                            onMangaClick = onMangaClick,
                             onDeleteHistoryItem = onDeleteHistoryItem,
                             onClearAllHistory = onClearAllHistory,
                             onExploreHome = { onTabSelected(0) }
@@ -611,9 +612,7 @@ fun HomeScreen(
         ) {
             com.example.ui.components.CosmicSpaceFooterAura(
                 enabled = isCosmicAuraActive,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
+                modifier = Modifier.matchParentSize()
             )
 
             NexusBottomFooterBar(

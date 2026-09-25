@@ -370,7 +370,7 @@ fun NexusBottomFooterBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 12.dp)
             .testTag("nexus_bottom_footer_bar")
     ) {
         Surface(
@@ -1074,16 +1074,109 @@ fun FavoritesTabContent(
  * TAB 2: READING HISTORY VIEW (سجل القراءة الذكي)
  * =========================================================================
  */
+/**
+ * Filter types for Reading History tab
+ */
+enum class HistoryFilterType(val label: String) {
+    ALL("الكل"),
+    IN_PROGRESS("قيد القراءة"),
+    COMPLETED("مكتمل"),
+    TODAY("اليوم")
+}
+
+/**
+ * =========================================================================
+ * TAB 3: READING HISTORY VIEW (سجل القراءة الذكي والمطور - الإصدار 2.0.9)
+ * =========================================================================
+ */
 @Composable
 fun HistoryTabContent(
     historyList: List<ReadingHistoryEntry>,
     onContinueReading: (String, Int) -> Unit,
+    onMangaClick: ((String) -> Unit)? = null,
     onDeleteHistoryItem: (String) -> Unit,
     onClearAllHistory: () -> Unit,
     onExploreHome: () -> Unit
 ) {
     val accentPrimary = MaterialTheme.colorScheme.primary
     val accentSecondary = MaterialTheme.colorScheme.secondary
+
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(HistoryFilterType.ALL) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<ReadingHistoryEntry?>(null) }
+
+    // Dialog: Confirmation for clearing all history
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            title = {
+                Text(
+                    text = "مسح كامل سجل القراءة",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Text(
+                    text = "هل أنت متأكد من رغبتك في حذف جميع العناصر المحفوظة في سجل القراءة؟ لا يمكن التراجع عن هذه العملية.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearConfirmDialog = false
+                        onClearAllHistory()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("مسح الكل", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("إلغاء")
+                }
+            }
+        )
+    }
+
+    // Dialog: Confirmation for deleting a single history item
+    if (itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = {
+                Text(
+                    text = "حذف من السجل",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Text(
+                    text = "هل تريد حذف \"${itemToDelete?.mangaTitle}\" من سجل القراءة؟",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        itemToDelete?.let { onDeleteHistoryItem(it.mangaId) }
+                        itemToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("حذف", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) {
+                    Text("إلغاء")
+                }
+            }
+        )
+    }
 
     if (historyList.isEmpty()) {
         Box(
@@ -1131,7 +1224,7 @@ fun HistoryTabContent(
                     )
 
                     Text(
-                        text = "عند قراءتك لأي فصل في التطبيق، سيتم حفظ الفصول والصفحة التي توقفت عندها تلقائياً هنا لتتمكن من المتابعة بنقرة واحدة.",
+                        text = "عند قراءتك لأي فصل في التطبيق، سيتم حفظ الفصول والصفحة التي توقفت عندها تلقائياً هنا مع مؤشر التقدم لتتمكن من المتابعة بنقرة واحدة.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -1164,6 +1257,42 @@ fun HistoryTabContent(
             }
         }
     } else {
+        // Computed counts and filters
+        val totalCount = historyList.size
+        val inProgressCount = remember(historyList) {
+            historyList.count { it.totalPages > 1 && it.pageNumber < it.totalPages }
+        }
+        val completedCount = remember(historyList) {
+            historyList.count { it.totalPages > 0 && it.pageNumber >= it.totalPages }
+        }
+        val todayCount = remember(historyList) {
+            val now = System.currentTimeMillis()
+            historyList.count { (now - it.timestamp) < 24 * 3600 * 1000L }
+        }
+
+        // Filtered items list
+        val filteredList = remember(historyList, searchQuery, selectedFilter) {
+            val query = searchQuery.trim().lowercase()
+            historyList.filter { entry ->
+                val matchesSearch = query.isEmpty() ||
+                    entry.mangaTitle.lowercase().contains(query) ||
+                    entry.chapterTitle.lowercase().contains(query) ||
+                    entry.chapterNumber.toString().contains(query)
+
+                val matchesFilter = when (selectedFilter) {
+                    HistoryFilterType.ALL -> true
+                    HistoryFilterType.IN_PROGRESS -> entry.totalPages > 1 && entry.pageNumber < entry.totalPages
+                    HistoryFilterType.COMPLETED -> entry.totalPages > 0 && entry.pageNumber >= entry.totalPages
+                    HistoryFilterType.TODAY -> {
+                        val now = System.currentTimeMillis()
+                        (now - entry.timestamp) < 24 * 3600 * 1000L
+                    }
+                }
+
+                matchesSearch && matchesFilter
+            }
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -1171,29 +1300,53 @@ fun HistoryTabContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 90.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
+            // 1. Header with Stats & Clear All Button
+            item(key = "history_header_row") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
-                            text = "سجل القراءة الأخير",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 18.sp
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "سجل القراءة",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 20.sp
+                                )
                             )
-                        )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = accentPrimary.copy(alpha = 0.15f),
+                                border = BorderStroke(0.8.dp, accentPrimary.copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "$totalCount عمل",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = accentPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
                         Text(
-                            text = "يتذكر الفصول والصفحة التي توقفت عندها",
-                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            text = "حفظ تلقائي للفصول والصفحات مع تتبع دقيق لنسبة الإنجاز",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
                         )
                     }
 
                     OutlinedButton(
-                        onClick = onClearAllHistory,
+                        onClick = { showClearConfirmDialog = true },
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
@@ -1215,7 +1368,269 @@ fun HistoryTabContent(
                 }
             }
 
-            items(historyList, key = { it.mangaId }) { item ->
+            // 2. Quick Resume Hero Card for Last Read Manga
+            val latestItem = historyList.firstOrNull()
+            if (latestItem != null && searchQuery.isEmpty() && selectedFilter == HistoryFilterType.ALL) {
+                item(key = "history_quick_resume_banner") {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        border = BorderStroke(1.2.dp, Brush.horizontalGradient(listOf(accentPrimary.copy(alpha = 0.5f), accentSecondary.copy(alpha = 0.3f)))),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 54.dp, height = 72.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, accentPrimary.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                    .clickable { onMangaClick?.invoke(latestItem.mangaId) }
+                            ) {
+                                NexusMangaImage(
+                                    imageUrl = latestItem.mangaCover,
+                                    fallbackRes = null,
+                                    contentDescription = latestItem.mangaTitle,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = accentPrimary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "متابعة من حيث توقفت",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = accentPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+
+                                Text(
+                                    text = latestItem.mangaTitle,
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                Text(
+                                    text = "الفصل ${latestItem.chapterNumber} • صفحة ${latestItem.pageNumber} من ${latestItem.totalPages.coerceAtLeast(1)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+
+                            Button(
+                                onClick = { onContinueReading(latestItem.mangaId, latestItem.chapterNumber) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = accentPrimary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text("استئناف", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Search Bar Field
+            item(key = "history_search_bar") {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = {
+                        Text(
+                            text = "ابحث في سجل القراءة باسم العمل أو الفصل...",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = accentPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "مسح البحث",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentPrimary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // 4. Interactive Filter Chips
+            item(key = "history_filter_chips_row") {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(HistoryFilterType.values()) { filter ->
+                        val isSelected = selectedFilter == filter
+                        val filterBadge = when (filter) {
+                            HistoryFilterType.ALL -> "$totalCount"
+                            HistoryFilterType.IN_PROGRESS -> "$inProgressCount"
+                            HistoryFilterType.COMPLETED -> "$completedCount"
+                            HistoryFilterType.TODAY -> "$todayCount"
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) accentPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) accentPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { selectedFilter = filter }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = filter.label,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.25f) else accentPrimary.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = filterBadge,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else accentPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Empty Search Results State
+            if (filteredList.isEmpty()) {
+                item(key = "history_empty_filter_state") {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = "لم يتم العثور على أي عمل يطابق بحثك",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                            Text(
+                                text = "جرّب تغيير عبارة البحث أو اختيار تصنيف آخر من الأعلى.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    selectedFilter = HistoryFilterType.ALL
+                                },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("إعادة ضبط الفلاتر", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. History List Items with Progress Bar and Enhanced Actions
+            items(filteredList, key = { it.mangaId }) { item ->
+                val progressFraction = if (item.totalPages > 0) {
+                    (item.pageNumber.toFloat() / item.totalPages.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+                val progressPercent = (progressFraction * 100).toInt()
+                val isCompleted = item.totalPages > 0 && item.pageNumber >= item.totalPages
+
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1226,133 +1641,196 @@ fun HistoryTabContent(
                         .clickable { onContinueReading(item.mangaId, item.chapterNumber) }
                         .testTag("history_card_${item.mangaId}")
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Cover
-                        Box(
-                            modifier = Modifier
-                                .size(width = 64.dp, height = 86.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .border(1.dp, accentPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            NexusMangaImage(
-                                imageUrl = item.mangaCover,
-                                fallbackRes = null,
-                                contentDescription = item.mangaTitle,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-
-                        // Details
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = item.mangaTitle,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 15.sp
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            // Cover with clickable link to manga details
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 68.dp, height = 92.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, accentPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                                    .clickable { onMangaClick?.invoke(item.mangaId) }
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = accentPrimary.copy(alpha = 0.15f),
-                                    border = BorderStroke(0.5.dp, accentPrimary.copy(alpha = 0.4f))
-                                ) {
-                                    Text(
-                                        text = "الفصل ${item.chapterNumber}",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = accentPrimary,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                }
-
-                                if (item.totalPages > 0) {
-                                    Text(
-                                        text = "صفحة ${item.pageNumber} من ${item.totalPages}",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                }
+                                NexusMangaImage(
+                                    imageUrl = item.mangaCover,
+                                    fallbackRes = null,
+                                    contentDescription = item.mangaTitle,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            // Details Section
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Schedule,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(12.dp)
-                                )
                                 Text(
-                                    text = item.timestampFormatted,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                        fontSize = 10.sp
-                                    )
+                                    text = item.mangaTitle,
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 15.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.clickable { onMangaClick?.invoke(item.mangaId) }
                                 )
-                            }
-                        }
 
-                        // Action Buttons: Continue & Delete
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Button(
-                                onClick = { onContinueReading(item.mangaId, item.chapterNumber) },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = accentPrimary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
-                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = accentPrimary.copy(alpha = 0.15f),
+                                        border = BorderStroke(0.5.dp, accentPrimary.copy(alpha = 0.4f))
+                                    ) {
+                                        Text(
+                                            text = "الفصل ${item.chapterNumber}",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = accentPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            )
+                                        )
+                                    }
+
+                                    if (isCompleted) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF2E7D32).copy(alpha = 0.15f),
+                                            border = BorderStroke(0.5.dp, Color(0xFF4CAF50).copy(alpha = 0.5f))
+                                        ) {
+                                            Text(
+                                                text = "مكتمل 100% ✨",
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = Color(0xFF4CAF50),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp
+                                                )
+                                            )
+                                        }
+                                    } else if (item.totalPages > 0) {
+                                        Text(
+                                            text = "صفحة ${item.pageNumber} من ${item.totalPages}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp
+                                            )
+                                        )
+                                    }
+                                }
+
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.PlayArrow,
+                                        imageVector = Icons.Default.Schedule,
                                         contentDescription = null,
-                                        modifier = Modifier.size(14.dp)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(12.dp)
                                     )
-                                    Text("متابعة", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    Text(
+                                        text = item.timestampFormatted,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            fontSize = 10.sp
+                                        )
+                                    )
                                 }
                             }
 
-                            IconButton(
-                                onClick = { onDeleteHistoryItem(item.mangaId) },
-                                modifier = Modifier.size(28.dp)
+                            // Action Buttons: Continue & Delete
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "حذف من السجل",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(16.dp)
+                                Button(
+                                    onClick = { onContinueReading(item.mangaId, item.chapterNumber) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = accentPrimary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text("متابعة", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = { itemToDelete = item },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "حذف من السجل",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Modern Reading Progress Bar
+                        if (item.totalPages > 0) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isCompleted) "تم إنهاء الفصل بالكامل" else "تقدم القراءة: $progressPercent%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (isCompleted) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (isCompleted) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "${item.pageNumber}/${item.totalPages}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+
+                                LinearProgressIndicator(
+                                    progress = { progressFraction },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = if (isCompleted) Color(0xFF4CAF50) else accentPrimary,
+                                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
                                 )
                             }
                         }

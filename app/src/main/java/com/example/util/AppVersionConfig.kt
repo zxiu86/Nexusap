@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.0.8"
-    const val VERSION_CODE = 48
+    const val VERSION_NAME = "2.0.9"
+    const val VERSION_CODE = 49
     const val BUILD_CODENAME = "Nexus Titan SUPER"
     const val RELEASE_CHANNEL = "النسخة الرسمية الخارقة (SUPER)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.0.8 SUPER"
+     * Short version string: "v2.0.9 SUPER"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME SUPER"
 
     /**
-     * Build identifier: "Build 48"
+     * Build identifier: "Build 49"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.0.8 SUPER (Build 48) • فريق Nexus"
+     * "الإصدار الرسمي v2.0.9 SUPER (Build 49) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME SUPER (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,9 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "تحديث مسار قراءة وتحميل بيانات المستخدمين حصراً من مستودع البيانات zxiu86/Data/user/user.json وإلغاء إنشاء ومزامنة ملف users/users.json نهائياً.",
-        "تحديث قراءة وتحميل البلاغات من مستودع zxiu86/Data/report.json مع دعم الترحيل السلس والتلقائي للبلاغات.",
-        "تطبيق إعدادات تخصيص مظهر شعاع وتموج الفوتر فورياً في شريط التنقل ولوحة المعاينة دون الحاجة لإغلاق أو إعادة تشغيل التطبيق.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.0.8 داخلياً وخارجياً لضمان أعلى مستويات الكفاءة والاستقرار."
+        "تطوير مظهر الفضاء الكوني السفلي للفوتر وجعله ثابتاً ومستقراً 100% دون أخذ مساحة إضافية أو تحريك الفوتر، مع استغلال المساحة السفلية الفارغة تحته بأناقة.",
+        "ترقية نجوم الفضاء الفلكية لتكون واقعية فائقة الجمال بدقة فيزيائية تشمل إشعاعات ضوئية رباعية (Diffraction Flares)، هالات غازية، شهب متلألئة، وميضاً عضوياً، ولمعان غبار النجوم.",
+        "تطوير شامل لسجل القراءة: إضافة شريط بحث فوري، تصنيفات وفلاتر (الكل، قيد القراءة، مكتمل، اليوم)، مؤشر تقدم القراءة لكل فصل بالنسبة المئوية، وبطاقة إحصائيات علوية واستئناف سريع.",
+        "إضافة تأكيد أمان عند مسح كامل سجل القراءة أو حذف عنصر، مع زيادة سعة تخزين السجل إلى 150 عملاً.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.0.9 (Build 49) داخلياً وخارجياً لضمان أعلى مستويات الأداء والاستقرار."
     )
 }

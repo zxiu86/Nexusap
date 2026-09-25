@@ -1053,7 +1053,7 @@ class MangaRepository(private val context: Context) {
 
         val currentList = _readingHistoryFlow.value.filterNot { it.mangaId == mangaId }.toMutableList()
         currentList.add(0, entry)
-        _readingHistoryFlow.value = currentList.take(50) // Keep top 50 recent items
+        _readingHistoryFlow.value = currentList.take(150) // Keep top 150 recent items
         saveReadingHistoryToDisk()
     }
 
