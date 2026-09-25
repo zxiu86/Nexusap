@@ -698,16 +698,50 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         _showUpdateDialog.value = false
     }
 
+    val updateDownloadState = InAppUpdateManager.downloadState
+
     fun triggerAppUpdate(context: Context) {
         val update = _appUpdateState.value
         if (update.downloadUrl.isNotBlank()) {
+            _showUpdateDialog.value = false
             InAppUpdateManager.startApkDownload(
                 context = context,
                 downloadUrl = update.downloadUrl,
                 versionName = update.latestVersion
             )
         }
-        _showUpdateDialog.value = false
+    }
+
+    fun cancelAppUpdateDownload() {
+        InAppUpdateManager.cancelDownload()
+    }
+
+    fun hideAppUpdateDownloadDialog() {
+        InAppUpdateManager.hideDownloadDialog()
+    }
+
+    fun showAppUpdateDownloadDialog() {
+        InAppUpdateManager.showDownloadDialog()
+    }
+
+    fun retryAppUpdateDownload(context: Context) {
+        val state = InAppUpdateManager.downloadState.value
+        val url = state.downloadUrl.ifBlank { _appUpdateState.value.downloadUrl }
+        val version = state.versionName.ifBlank { _appUpdateState.value.latestVersion }
+        if (url.isNotBlank()) {
+            InAppUpdateManager.startApkDownload(context, url, version)
+        }
+    }
+
+    fun installDownloadedApk(context: Context) {
+        val file = InAppUpdateManager.downloadState.value.downloadedApkFile
+        if (file != null && file.exists()) {
+            InAppUpdateManager.installApk(context, file)
+        }
+    }
+
+    fun dismissAppUpdateDownloadDialog() {
+        InAppUpdateManager.dismissDownload()
     }
 
     fun toggleFavorite(mangaId: String) {

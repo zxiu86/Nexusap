@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
@@ -753,7 +754,7 @@ private fun SettingsSubPageDetailView(
 
 /**
  * 1. Appearance & Theming Sub-Page - Redesigned with Dynamic Spacious Layout,
- * Footer Wave Customizer, and Elegant White Theme Showcase
+ * Quick Preset Themes, Live Appearance Studio 2.0, Footer Wave Customizer, and Elegant White Theme Showcase
  */
 @Composable
 private fun AppearanceSubPage(
@@ -783,7 +784,7 @@ private fun AppearanceSubPage(
     var selectedPaletteTab by remember { mutableStateOf(if (activePreset.isMultiColor) 1 else 0) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // 🌟 1. Interactive Live Appearance Studio (لوحة المعاينة التفاعلية الحية)
+        // 🌟 1. Interactive Live Appearance Studio 2.0 (لوحة المعاينة التفاعلية الحية المباشرة)
         LiveAppearanceStudioCard(
             themeMode = themeMode,
             accentPreset = activePreset,
@@ -794,7 +795,120 @@ private fun AppearanceSubPage(
             footerWaveColor = footerWaveColor
         )
 
-        // 💡 2. Lighting Mode Card (وضع الإضاءة المريح)
+        // ⚡ 2. Quick Master Presets (السمات السريعة الجاهزة بنقرة واحدة)
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = accentPrimary.copy(alpha = 0.15f),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = accentPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        Column {
+                            Text(
+                                text = "سمات جاهزة متناسقة",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                            Text(
+                                text = "تطبيق فوري لنمط الإضاءة واللون المناسب بنقرة واحدة",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QuickMasterThemeCard(
+                        title = "فضاء كوني",
+                        icon = "🌌",
+                        isSelected = themeMode == 1 && accentColor == 0,
+                        accent = Color(0xFF6366F1),
+                        onClick = {
+                            onUpdateThemeMode(1)
+                            onUpdateAccentColor(0)
+                            onUpdateBackgroundStyle(0)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    QuickMasterThemeCard(
+                        title = "أبيض لؤلؤي",
+                        icon = "🤍",
+                        isSelected = (accentColor == 8 || accentColor == 18),
+                        accent = Color(0xFF0F172A),
+                        onClick = {
+                            onUpdateThemeMode(2)
+                            onUpdateAccentColor(8)
+                            onUpdateBackgroundStyle(2)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    QuickMasterThemeCard(
+                        title = "ذهب إمبراطوري",
+                        icon = "👑",
+                        isSelected = themeMode == 1 && accentColor == 3,
+                        accent = Color(0xFFF59E0B),
+                        onClick = {
+                            onUpdateThemeMode(1)
+                            onUpdateAccentColor(3)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    QuickMasterThemeCard(
+                        title = "زمرد ملكي",
+                        icon = "🌿",
+                        isSelected = themeMode == 1 && accentColor == 2,
+                        accent = Color(0xFF10B981),
+                        onClick = {
+                            onUpdateThemeMode(1)
+                            onUpdateAccentColor(2)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // 💡 3. Lighting Mode Card (وضع الإضاءة العام)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -887,7 +1001,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🤍 3. Theme Palette & Spotlight on the New "Elegant White" Theme (السمة واللون الأبيض الأنيق)
+        // 🤍 4. Theme Palette & Spotlight on the New "Elegant White" Theme (السمة واللون الأبيض الأنيق)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1178,7 +1292,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🌊 4. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر - جديد v2.0.7)
+        // 🌊 5. Footer Ripple Wave Studio (تخصيص التموج اللوني لشريط الفوتر)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1234,7 +1348,7 @@ private fun AppearanceSubPage(
                                     color = accentPrimary
                                 ) {
                                     Text(
-                                        text = "جديد v2.0.7",
+                                        text = "تفاعلي ✨",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
@@ -1497,7 +1611,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🎨 5. Background Style & Card Effects Card (نمط خلفية التطبيق وتأثيرات الإطارات)
+        // 🎨 6. Background Style & Card Effects Card (نمط خلفية التطبيق وتأثيرات الإطارات)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1570,7 +1684,7 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🌌 6. Legendary Cosmic Space Footer Aura Section (فضاء الفوتر الكوني)
+        // 🌌 7. Legendary Cosmic Space Footer Aura Section (فضاء الفوتر الكوني)
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = if (isCosmicUnlocked) Color(0xFF0F0B1E) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
@@ -1686,6 +1800,41 @@ private fun AppearanceSubPage(
                         fontSize = 10.5.sp,
                         lineHeight = 15.sp
                     )
+                )
+            }
+        }
+
+        // 🔄 8. Reset Appearance Defaults Action
+        OutlinedButton(
+            onClick = {
+                onUpdateThemeMode(1) // Dark mode
+                onUpdateAccentColor(0) // Default indigo
+                onUpdateBackgroundStyle(0) // Default
+                onUpdateFooterWaveSpeed(1) // Normal
+                onUpdateFooterWaveInterval(2) // Balanced
+                onUpdateFooterWaveColor(0) // Matching theme
+                onUpdateCardAnimationEnabled(true)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "استعادة مظهر نكسوس الافتراضي",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp
                 )
             }
         }
@@ -2049,6 +2198,46 @@ private fun MiniNavDot(active: Boolean, accent: Color) {
                     .size(4.dp)
                     .clip(CircleShape)
                     .background(Color.White)
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickMasterThemeCard(
+    title: String,
+    icon: String,
+    isSelected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.9f else 0.35f),
+        border = BorderStroke(
+            if (isSelected) 2.dp else 1.dp,
+            if (isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = icon,
+                fontSize = 18.sp
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 10.5.sp
+                ),
+                maxLines = 1
             )
         }
     }

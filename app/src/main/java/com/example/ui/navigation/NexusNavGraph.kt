@@ -71,10 +71,30 @@ fun NexusNavGraph(
             // Screen 1: Home Screen (الصفحة الرئيسية)
             composable(NexusDestinations.HOME) {
                 val homeState by viewModel.homeUiState.collectAsState()
+                val updateDownloadState by viewModel.updateDownloadState.collectAsState()
                 val context = androidx.compose.ui.platform.LocalContext.current
 
                 HomeScreen(
                     uiState = homeState,
+                    downloadProgressState = updateDownloadState,
+                    onInstallUpdate = {
+                        viewModel.installDownloadedApk(context)
+                    },
+                    onCancelUpdateDownload = {
+                        viewModel.cancelAppUpdateDownload()
+                    },
+                    onHideUpdateDownloadDialog = {
+                        viewModel.hideAppUpdateDownloadDialog()
+                    },
+                    onShowUpdateDownloadDialog = {
+                        viewModel.showAppUpdateDownloadDialog()
+                    },
+                    onRetryUpdateDownload = {
+                        viewModel.retryAppUpdateDownload(context)
+                    },
+                    onDismissUpdateDownloadDialog = {
+                        viewModel.dismissAppUpdateDownloadDialog()
+                    },
                     onMangaClick = { mangaId ->
                         navController.navigate(NexusDestinations.detailsRoute(mangaId))
                     },

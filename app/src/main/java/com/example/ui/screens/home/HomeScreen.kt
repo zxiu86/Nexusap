@@ -112,6 +112,7 @@ import com.example.data.model.ReportSubCategory
 import com.example.data.model.UserReport
 import com.example.ui.components.AdminBroadcastBanner
 import com.example.ui.components.AdminDashboardDialog
+import com.example.ui.components.AppDownloadProgressDialog
 import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.AuthDialog
 import com.example.ui.components.FavoritesPopupDialog
@@ -120,6 +121,8 @@ import com.example.ui.components.StartIoBannerAd
 import com.example.ui.components.SubmitReportDialog
 import com.example.ui.components.UserReportsListDialog
 import com.example.ui.components.UserSideReportBanner
+import com.example.util.UpdateDownloadProgressState
+import com.example.util.UpdateDownloadStatus
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.ui.geometry.Offset
 import com.example.ui.theme.ThemePalettes
@@ -160,6 +163,13 @@ fun HomeScreen(
     onOpenUpdatesDialog: () -> Unit = {},
     onCheckCloudUpdates: () -> Unit = {},
     onDismissUpdateDialog: () -> Unit = {},
+    downloadProgressState: UpdateDownloadProgressState = UpdateDownloadProgressState(),
+    onInstallUpdate: () -> Unit = {},
+    onCancelUpdateDownload: () -> Unit = {},
+    onHideUpdateDownloadDialog: () -> Unit = {},
+    onShowUpdateDownloadDialog: () -> Unit = {},
+    onRetryUpdateDownload: () -> Unit = {},
+    onDismissUpdateDownloadDialog: () -> Unit = {},
     onPageChange: (Int) -> Unit = {},
     onNextPage: () -> Unit = {},
     onPrevPage: () -> Unit = {},
@@ -655,6 +665,75 @@ fun HomeScreen(
                 onUpdateClick = onTriggerUpdate,
                 onDismiss = onDismissUpdateDialog
             )
+        }
+
+        // 🚀 In-App Live Download Progress Popup Dialog
+        AppDownloadProgressDialog(
+            downloadState = downloadProgressState,
+            onInstallClick = onInstallUpdate,
+            onCancelClick = onCancelUpdateDownload,
+            onHideClick = onHideUpdateDownloadDialog,
+            onRetryClick = onRetryUpdateDownload,
+            onDismiss = onDismissUpdateDownloadDialog
+        )
+
+        // ⚡ Floating Mini Download Status Pill (When download is minimized in background)
+        if (!downloadProgressState.isDialogVisible &&
+            (downloadProgressState.status == UpdateDownloadStatus.DOWNLOADING ||
+             downloadProgressState.status == UpdateDownloadStatus.CONNECTING ||
+             downloadProgressState.status == UpdateDownloadStatus.VERIFYING ||
+             downloadProgressState.status == UpdateDownloadStatus.COMPLETED)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 76.dp, start = 16.dp, end = 16.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .clickable { onShowUpdateDownloadDialog() }
+                        .testTag("floating_download_progress_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            progress = { downloadProgressState.progress },
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.5.dp,
+                            color = if (downloadProgressState.status == UpdateDownloadStatus.COMPLETED) Color(0xFF10B981) else MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = if (downloadProgressState.status == UpdateDownloadStatus.COMPLETED) {
+                                    "اكتمل التنزيل! انقر للتثبيت 🚀"
+                                } else {
+                                    "جاري تنزيل التحديث (${downloadProgressState.progressPercent}%) • ${downloadProgressState.formattedSpeed}"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                            Text(
+                                text = "${downloadProgressState.formattedDownloadedSize} / ${downloadProgressState.formattedTotalSize} • انقر لفتح لوحة المتابعة",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 9.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // 🔐 Authentication Dialog (Google / Email & Password)

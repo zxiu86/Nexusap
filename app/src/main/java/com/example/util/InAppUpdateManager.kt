@@ -16,6 +16,11 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -25,11 +30,59 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 
+enum class UpdateDownloadStatus {
+    IDLE,
+    CONNECTING,
+    DOWNLOADING,
+    VERIFYING,
+    COMPLETED,
+    ERROR,
+    CANCELLED
+}
+
+data class UpdateDownloadProgressState(
+    val status: UpdateDownloadStatus = UpdateDownloadStatus.IDLE,
+    val progress: Float = 0f, // 0.0 to 1.0
+    val progressPercent: Int = 0, // 0 to 100
+    val bytesDownloaded: Long = 0L,
+    val totalBytes: Long = 0L,
+    val speedKbps: Double = 0.0,
+    val estimatedRemainingSeconds: Long = 0L,
+    val downloadedApkFile: File? = null,
+    val downloadUrl: String = "",
+    val versionName: String = "",
+    val errorMessage: String? = null,
+    val isDialogVisible: Boolean = false
+) {
+    val formattedDownloadedSize: String
+        get() = formatBytes(bytesDownloaded)
+
+    val formattedTotalSize: String
+        get() = if (totalBytes > 0) formatBytes(totalBytes) else "-- MB"
+
+    val formattedSpeed: String
+        get() = when {
+            speedKbps >= 1024 -> String.format("%.2f MB/s", speedKbps / 1024.0)
+            speedKbps > 0 -> String.format("%.0f KB/s", speedKbps)
+            else -> "جاري الحساب..."
+        }
+
+    private fun formatBytes(bytes: Long): String {
+        val mb = bytes.toDouble() / (1024.0 * 1024.0)
+        return String.format("%.1f MB", mb)
+    }
+}
+
 object InAppUpdateManager {
 
     private const val TAG = "InAppUpdateManager"
     private const val PREFS_NAME = "nexus_update_prefs"
     private const val KEY_PENDING_APK_PATH = "pending_apk_path"
+
+    private val _downloadState = MutableStateFlow(UpdateDownloadProgressState())
+    val downloadState: StateFlow<UpdateDownloadProgressState> = _downloadState.asStateFlow()
+
+    private var currentDownloadJob: Job? = null
 
     private val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -120,8 +173,6 @@ object InAppUpdateManager {
 
     /**
      * Resolves the best directory to store the APK for installation.
-     * Prefers getExternalFilesDir(DIRECTORY_DOWNLOADS) to ensure Android's PackageInstaller
-     * has full cross-process read access without SELinux denials.
      */
     private fun getUpdateStorageDir(context: Context): File {
         val extDownloads = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -140,8 +191,7 @@ object InAppUpdateManager {
     }
 
     /**
-     * Downloads the APK file directly with verification and automatic launch of the installer.
-     * If any error occurs, it gracefully falls back to the browser download.
+     * Starts downloading the update APK with real-time reactive progress updates.
      */
     fun startApkDownload(context: Context, downloadUrl: String, versionName: String) {
         if (downloadUrl.isBlank()) {
@@ -149,14 +199,31 @@ object InAppUpdateManager {
             return
         }
 
-        val appContext = context.applicationContext
-        showToast(appContext, "جاري تنزيل التحديث (v$versionName)... يرجى الانتظار", true)
+        // Cancel previous job if running
+        currentDownloadJob?.cancel()
 
-        CoroutineScope(Dispatchers.IO).launch {
+        val appContext = context.applicationContext
+
+        _downloadState.value = UpdateDownloadProgressState(
+            status = UpdateDownloadStatus.CONNECTING,
+            progress = 0f,
+            progressPercent = 0,
+            bytesDownloaded = 0L,
+            totalBytes = 0L,
+            speedKbps = 0.0,
+            downloadUrl = downloadUrl,
+            versionName = versionName,
+            isDialogVisible = true
+        )
+
+        currentDownloadJob = CoroutineScope(Dispatchers.IO).launch {
+            var tempApk: File? = null
+            var targetApk: File? = null
+
             try {
                 val updateDir = getUpdateStorageDir(appContext)
-                val targetApk = File(updateDir, "nexus_v$versionName.apk")
-                val tempApk = File(updateDir, "nexus_v$versionName.apk.tmp")
+                targetApk = File(updateDir, "nexus_v$versionName.apk")
+                tempApk = File(updateDir, "nexus_v$versionName.apk.tmp")
 
                 if (tempApk.exists()) tempApk.delete()
                 if (targetApk.exists()) targetApk.delete()
@@ -169,21 +236,63 @@ object InAppUpdateManager {
 
                 val response = httpClient.newCall(request).execute()
                 if (!response.isSuccessful || response.body == null) {
-                    throw IllegalStateException("HTTP ${response.code}: ${response.message}")
+                    throw IllegalStateException("فشل الاتصال بالخادم (HTTP ${response.code})")
                 }
 
                 val body = response.body!!
+                val contentLength = body.contentLength().coerceAtLeast(0L)
                 val inputStream = body.byteStream()
                 val outputStream = FileOutputStream(tempApk)
+
+                _downloadState.value = _downloadState.value.copy(
+                    status = UpdateDownloadStatus.DOWNLOADING,
+                    totalBytes = contentLength
+                )
 
                 val buffer = ByteArray(64 * 1024)
                 var bytesRead: Int
                 var totalBytesRead = 0L
 
+                var lastSpeedCalcTime = System.currentTimeMillis()
+                var bytesSinceLastSpeedCalc = 0L
+                var currentSpeedKbps = 0.0
+
                 try {
                     while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        if (!isActive) {
+                            throw kotlinx.coroutines.CancellationException("تم إلغاء التنزيل من قبل المستخدم")
+                        }
+
                         outputStream.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
+                        bytesSinceLastSpeedCalc += bytesRead
+
+                        val now = System.currentTimeMillis()
+                        val timeDiff = now - lastSpeedCalcTime
+                        if (timeDiff >= 300) {
+                            val seconds = timeDiff / 1000.0
+                            currentSpeedKbps = (bytesSinceLastSpeedCalc / 1024.0) / seconds
+                            lastSpeedCalcTime = now
+                            bytesSinceLastSpeedCalc = 0L
+
+                            val progressFraction = if (contentLength > 0) {
+                                (totalBytesRead.toFloat() / contentLength.toFloat()).coerceIn(0f, 1f)
+                            } else 0f
+                            val percent = (progressFraction * 100).toInt()
+
+                            val remainingBytes = (contentLength - totalBytesRead).coerceAtLeast(0L)
+                            val remainingSec = if (currentSpeedKbps > 0) {
+                                ((remainingBytes / 1024.0) / currentSpeedKbps).toLong()
+                            } else 0L
+
+                            _downloadState.value = _downloadState.value.copy(
+                                progress = progressFraction,
+                                progressPercent = percent,
+                                bytesDownloaded = totalBytesRead,
+                                speedKbps = currentSpeedKbps,
+                                estimatedRemainingSeconds = remainingSec
+                            )
+                        }
                     }
                     outputStream.flush()
                 } finally {
@@ -192,51 +301,101 @@ object InAppUpdateManager {
                     try { body.close() } catch (_: Exception) {}
                 }
 
-                // Verify file size and header
+                // Verify file integrity
+                _downloadState.value = _downloadState.value.copy(
+                    status = UpdateDownloadStatus.VERIFYING,
+                    progress = 1f,
+                    progressPercent = 100,
+                    bytesDownloaded = totalBytesRead
+                )
+
                 if (!isValidApkZip(tempApk)) {
                     tempApk.delete()
                     throw IllegalStateException("الملف المنزل غير مكتمل أو تالف (${totalBytesRead / 1024} KB)")
                 }
 
-                // Atomic rename to final APK file
+                // Rename to target APK
                 if (!tempApk.renameTo(targetApk)) {
                     tempApk.copyTo(targetApk, overwrite = true)
                     tempApk.delete()
                 }
 
-                // Make readable
                 targetApk.setReadable(true, false)
 
-                // Verify APK integrity using Android's PackageManager
+                // Verify with PackageManager
                 val packageInfo = appContext.packageManager.getPackageArchiveInfo(targetApk.absolutePath, PackageManager.GET_ACTIVITIES)
+                    ?: appContext.packageManager.getPackageArchiveInfo(targetApk.absolutePath, 0)
+
                 if (packageInfo == null) {
-                    Log.w(TAG, "packageArchiveInfo is null for downloaded APK, trying without flags")
-                    val fallbackInfo = appContext.packageManager.getPackageArchiveInfo(targetApk.absolutePath, 0)
-                    if (fallbackInfo == null) {
-                        targetApk.delete()
-                        withContext(Dispatchers.Main) {
-                            showToast(appContext, "الحزمة غير متوافقة أو تالفة، جاري فتح التحميل عبر المتصفح...", true)
-                            openDownloadInBrowser(appContext, downloadUrl)
-                        }
-                        return@launch
-                    }
+                    targetApk.delete()
+                    throw IllegalStateException("حزمة التحديث غير متوافقة مع هذا الجهاز")
                 }
 
-                Log.d(TAG, "APK successfully verified: ${targetApk.absolutePath} (${targetApk.length()} bytes)")
+                Log.d(TAG, "APK successfully downloaded & verified: ${targetApk.absolutePath}")
+
+                _downloadState.value = _downloadState.value.copy(
+                    status = UpdateDownloadStatus.COMPLETED,
+                    progress = 1f,
+                    progressPercent = 100,
+                    downloadedApkFile = targetApk,
+                    bytesDownloaded = targetApk.length(),
+                    totalBytes = targetApk.length()
+                )
 
                 withContext(Dispatchers.Main) {
-                    showToast(appContext, "اكتمل التنزيل بنجاح! جاري التثبيت...")
+                    showToast(appContext, "اكتمل تنزيل التحديث بنجاح! جاري التثبيت...")
                     installApk(appContext, targetApk)
                 }
 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                Log.d(TAG, "Download cancelled by user")
+                tempApk?.delete()
+                _downloadState.value = _downloadState.value.copy(
+                    status = UpdateDownloadStatus.CANCELLED,
+                    errorMessage = "تم إلغاء التنزيل"
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "Direct download failed, falling back to browser", e)
-                withContext(Dispatchers.Main) {
-                    showToast(appContext, "جاري فتح رابط التحديث في المتصفح...", true)
-                    openDownloadInBrowser(appContext, downloadUrl)
-                }
+                Log.e(TAG, "Direct download failed", e)
+                tempApk?.delete()
+                _downloadState.value = _downloadState.value.copy(
+                    status = UpdateDownloadStatus.ERROR,
+                    errorMessage = e.localizedMessage ?: "حدث خطأ غير متوقع أثناء التنزيل"
+                )
             }
         }
+    }
+
+    /**
+     * Cancels the active download job
+     */
+    fun cancelDownload() {
+        currentDownloadJob?.cancel()
+        _downloadState.value = _downloadState.value.copy(
+            status = UpdateDownloadStatus.CANCELLED,
+            errorMessage = "تم إلغاء التنزيل"
+        )
+    }
+
+    /**
+     * Hides the progress dialog while keeping the background download alive
+     */
+    fun hideDownloadDialog() {
+        _downloadState.value = _downloadState.value.copy(isDialogVisible = false)
+    }
+
+    /**
+     * Shows the download progress dialog again
+     */
+    fun showDownloadDialog() {
+        _downloadState.value = _downloadState.value.copy(isDialogVisible = true)
+    }
+
+    /**
+     * Resets the download state to IDLE and closes dialog
+     */
+    fun dismissDownload() {
+        currentDownloadJob?.cancel()
+        _downloadState.value = UpdateDownloadProgressState(isDialogVisible = false)
     }
 
     /**
@@ -255,7 +414,7 @@ object InAppUpdateManager {
             }
 
             if (!canInstallPackages(context)) {
-                showToast(context, "يرجى منح إذن تثبيت التطبيقات من الإعدادات للمتابعة", true)
+                showToast(context, "يرجى تفعيل خيار تثبيت التطبيقات غير المعروفة للمتابعة", true)
                 requestInstallPermission(context, apkFile)
                 return
             }
@@ -275,7 +434,6 @@ object InAppUpdateManager {
                 clipData = ClipData.newRawUri("nexus_apk", apkUri)
             }
 
-            // Grant URI read permission explicitly to package installer packages
             val knownInstallers = listOf(
                 "com.google.android.packageinstaller",
                 "com.android.packageinstaller",
@@ -307,28 +465,7 @@ object InAppUpdateManager {
     }
 
     /**
-     * Alternative: Downloads directly via Android's native system DownloadManager
-     */
-    fun downloadViaSystemDownloadManager(context: Context, downloadUrl: String, versionName: String) {
-        try {
-            val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
-                setTitle("Nexus Update v$versionName")
-                setDescription("تنزيل تحديث تطبيق نكسوس")
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "nexus_v$versionName.apk")
-                setMimeType("application/vnd.android.package-archive")
-            }
-            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            dm.enqueue(request)
-            showToast(context, "تم بدء التنزيل عبر مدير تنزيلات النظام. تابعه من لوحة الإشعارات", true)
-        } catch (e: Exception) {
-            Log.e(TAG, "DownloadManager failed", e)
-            openDownloadInBrowser(context, downloadUrl)
-        }
-    }
-
-    /**
-     * Opens the direct download link in the external web browser
+     * Direct download fallback via external web browser
      */
     fun openDownloadInBrowser(context: Context, url: String) {
         try {
