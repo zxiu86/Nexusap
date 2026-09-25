@@ -851,59 +851,129 @@ private fun AppearanceSubPage(
                     }
                 }
 
-                Row(
+                // Horizontal Scrollable Quick Master Themes Carousel
+                val quickMasterThemes = remember {
+                    listOf(
+                        QuickMasterThemeItem(
+                            id = "gold_imperial",
+                            title = "ذهب إمبراطوري",
+                            subtitle = "ذهبي ملكي دافئ",
+                            icon = "👑",
+                            accentId = 0, // NexusGold
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(NexusGold, NexusOrange),
+                            badge = "ملكي"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "blue_royal",
+                            title = "أزرق ملكي",
+                            subtitle = "ياقوتي ساطع",
+                            icon = "🔷",
+                            accentId = 1, // NexusBluePrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFF2196F3), Color(0xFF1565C0)),
+                            badge = "كلاسيكي"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "emerald_imperial",
+                            title = "زمرد ملكي",
+                            subtitle = "أخضر زمردي نقي",
+                            icon = "🌿",
+                            accentId = 5, // NexusEmeraldPrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                            badge = "منعش"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "violet_cosmic",
+                            title = "بنفسجي كوني",
+                            subtitle = "سديم الفضاء الساحر",
+                            icon = "🌌",
+                            accentId = 6, // NexusVioletPrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)),
+                            badge = "فلكي"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "white_pearl",
+                            title = "أبيض لؤلؤي",
+                            subtitle = "أناقة ناصعة مريحة",
+                            icon = "🤍",
+                            accentId = 8, // NexusWhitePrimary
+                            themeMode = 2,
+                            backgroundStyle = 2,
+                            swatchColors = listOf(Color.White, Color(0xFFCBD5E1)),
+                            badge = "مريح"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "marine_deep",
+                            title = "أزرق بحري",
+                            subtitle = "أعماق المحيط الهادئ",
+                            icon = "🌊",
+                            accentId = 3, // NexusMarineBluePrimary (#0000B3 / #3333FF)
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFF3333FF), Color(0xFF000080)),
+                            badge = "بحري"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "crimson_fire",
+                            title = "أحمر قرمزي",
+                            subtitle = "توهج ناري ملكي",
+                            icon = "🔥",
+                            accentId = 2, // NexusRedPrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFFE53935), Color(0xFFB71C1C)),
+                            badge = "حماسي"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "cherry_blossom",
+                            title = "أزهار الكرز",
+                            subtitle = "وردي ساكورا متألق",
+                            icon = "🌸",
+                            accentId = 4, // NexusCherryBlossomPrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFFFF77E1), Color(0xFFFF9BEB)),
+                            badge = "ساكورا"
+                        ),
+                        QuickMasterThemeItem(
+                            id = "amber_radiant",
+                            title = "كهرماني مشرق",
+                            subtitle = "إشعاع ذهبي دافئ",
+                            icon = "⚡",
+                            accentId = 7, // NexusAmberPrimary
+                            themeMode = 1,
+                            backgroundStyle = 0,
+                            swatchColors = listOf(Color(0xFFF59E0B), Color(0xFFD97706)),
+                            badge = "مشع"
+                        )
+                    )
+                }
+
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    QuickMasterThemeCard(
-                        title = "فضاء كوني",
-                        icon = "🌌",
-                        isSelected = themeMode == 1 && accentColor == 0,
-                        accent = Color(0xFF6366F1),
-                        onClick = {
-                            onUpdateThemeMode(1)
-                            onUpdateAccentColor(0)
-                            onUpdateBackgroundStyle(0)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    items(quickMasterThemes, key = { it.id }) { preset ->
+                        val isSelected = (accentColor == preset.accentId) &&
+                                (themeMode == preset.themeMode || (preset.themeMode == 1 && themeMode == 0))
 
-                    QuickMasterThemeCard(
-                        title = "أبيض لؤلؤي",
-                        icon = "🤍",
-                        isSelected = (accentColor == 8 || accentColor == 18),
-                        accent = Color(0xFF0F172A),
-                        onClick = {
-                            onUpdateThemeMode(2)
-                            onUpdateAccentColor(8)
-                            onUpdateBackgroundStyle(2)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    QuickMasterThemeCard(
-                        title = "ذهب إمبراطوري",
-                        icon = "👑",
-                        isSelected = themeMode == 1 && accentColor == 3,
-                        accent = Color(0xFFF59E0B),
-                        onClick = {
-                            onUpdateThemeMode(1)
-                            onUpdateAccentColor(3)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    QuickMasterThemeCard(
-                        title = "زمرد ملكي",
-                        icon = "🌿",
-                        isSelected = themeMode == 1 && accentColor == 2,
-                        accent = Color(0xFF10B981),
-                        onClick = {
-                            onUpdateThemeMode(1)
-                            onUpdateAccentColor(2)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                        QuickMasterThemeCard(
+                            preset = preset,
+                            isSelected = isSelected,
+                            onClick = {
+                                onUpdateThemeMode(preset.themeMode)
+                                onUpdateAccentColor(preset.accentId)
+                                onUpdateBackgroundStyle(preset.backgroundStyle)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -2203,41 +2273,125 @@ private fun MiniNavDot(active: Boolean, accent: Color) {
     }
 }
 
+data class QuickMasterThemeItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val icon: String,
+    val accentId: Int,
+    val themeMode: Int,
+    val backgroundStyle: Int,
+    val swatchColors: List<Color>,
+    val badge: String
+)
+
 @Composable
 private fun QuickMasterThemeCard(
-    title: String,
-    icon: String,
+    preset: QuickMasterThemeItem,
     isSelected: Boolean,
-    accent: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val primarySwatch = preset.swatchColors.firstOrNull() ?: MaterialTheme.colorScheme.primary
+    val isWhitePreset = preset.accentId == 8
+
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSelected) 0.9f else 0.35f),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) {
+            if (isWhitePreset) Color(0xFFF1F5F9) else primarySwatch.copy(alpha = 0.16f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        },
         border = BorderStroke(
             if (isSelected) 2.dp else 1.dp,
-            if (isSelected) accent else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            if (isSelected) {
+                if (isWhitePreset) Color(0xFF0F172A) else primarySwatch
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+            }
         ),
-        modifier = modifier.clickable { onClick() }
+        modifier = modifier
+            .width(132.dp)
+            .clickable { onClick() }
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            // Top Row: Emoji & Swatch Dot
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = preset.icon,
+                    fontSize = 20.sp
+                )
+
+                // Swatch Indicator with Checkmark
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (preset.swatchColors.size > 1) {
+                                Brush.sweepGradient(preset.swatchColors)
+                            } else {
+                                Brush.linearGradient(listOf(primarySwatch, primarySwatch))
+                            }
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = if (isWhitePreset) Color(0xFF0F172A) else Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            // Title & Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = preset.title,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                        color = if (isSelected) {
+                            if (isWhitePreset) Color(0xFF0F172A) else primarySwatch
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        fontSize = 12.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+
+            // Subtitle
             Text(
-                text = icon,
-                fontSize = 18.sp
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
-                    fontSize = 10.5.sp
+                text = preset.subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 10.sp,
+                    color = if (isSelected) {
+                        if (isWhitePreset) Color(0xFF334155) else MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    lineHeight = 13.sp
                 ),
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

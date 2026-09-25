@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.0"
-    const val VERSION_CODE = 50
-    const val BUILD_CODENAME = "Nexus Nova PRIME"
+    const val VERSION_NAME = "2.1.1"
+    const val VERSION_CODE = 51
+    const val BUILD_CODENAME = "Nexus Cosmic PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.1.0 PRIME"
+     * Short version string: "v2.1.1 PRIME"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME PRIME"
 
     /**
-     * Build identifier: "Build 50"
+     * Build identifier: "Build 51"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.1.0 PRIME (Build 50) • فريق Nexus"
+     * "الإصدار الرسمي v2.1.1 PRIME (Build 51) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME PRIME (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "إضافة نافذة منبثقة تفاعلية مخصصة لمتابعة تنزيل التحديث المباشر من داخل التطبيق لحظة بلحظة بنسبة التقدم والسرعة (MB/s) وحجم الملف المنزّل (MB) مع إمكانية المتابعة بالخلفية أو الإلغاء والتثبيت الفوري.",
-        "تحديث وتطوير شامل لصفحة تخصيص المظهر: إعادة ترتيب أنيقة، بطاقات السمات السريعة الجاهزة، استوديو المعاينة الحية المطور 2.0، واستعادة الإعدادات الافتراضية بنقرة واحدة.",
-        "شريط عائم ذكي لمتابعة تقدم التنزيل في الخلفية مع إمكانية إعادة فتح لوحة التنزيل في أي وقت.",
-        "ترقية ثبات فضاء الفوتر الكوني وسلاسة التموج اللوني وإمكانات تخصيص الأنماط البيضاء والداكنة بدقة فائقة.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.1.0 (Build 50) من داخل التطبيق وخارجه مع أعلى معايير الاستقرار والأداء."
+        "شعار ولوجو كوني جديد فائق الأناقة بمواصفات أندرويد القياسية: ثعلب هندسي كوني مفعم بنجوم وسدم الفضاء مع خلفية موحدة نظيفة وخالية من الحواف والإطارات.",
+        "إعادة برمجة وهندسة شريط السمات السريعة الجاهزة بنماذج مثالية ومطابقة 100% للألوان الحقيقية (ذهب إمبراطوري، أزرق ملكي، زمرد ملكي، بنفسجي كوني، أبيض لؤلؤي، وأزرق بحري).",
+        "نافذة منبثقة تفاعلية لمتابعة تنزيل التحديث المباشر من داخل التطبيق لحظة بلحظة بنسبة الإنجاز وسرعة النقل وحجم الملف.",
+        "استوديو المعاينة الحية المطور 2.0 مع تحسينات شاملة لترتيب وتصميم صفحة المظهر والتخصيص.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.1.1 (Build 51) من داخل وخارج التطبيق مع أداء فائق وسرعة استجابة عالية."
     )
 }
