@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/nexus_fox_cosmic_logo_1790348311858"
+        android:drawable="@drawable/nexus_lion_cosmic_logo_1790664517455"
         android:gravity="center" />
 </layer-list>

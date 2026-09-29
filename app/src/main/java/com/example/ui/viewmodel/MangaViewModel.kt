@@ -947,6 +947,9 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         val isDownloaded = repository.isChapterDownloaded(mangaId, chapterNumber)
         val lastSavedPage = repository.getLastReadPage(mangaId, chapterNumber)
 
+        // Immediately persist this chapter as the active and latest reading chapter
+        repository.saveActiveReadingSession(mangaId, chapterNumber)
+
         _readerUiState.value = ReaderUiState(
             manga = manga,
             currentChapter = null,
@@ -1028,6 +1031,18 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         if (current.number < manga.totalChaptersCount) {
             loadChapter(manga.id, current.number + 1)
         }
+    }
+
+    fun saveActiveReadingSession(mangaId: String, chapterNumber: Int) {
+        repository.saveActiveReadingSession(mangaId, chapterNumber)
+    }
+
+    fun clearActiveReadingSession() {
+        repository.clearActiveReadingSession()
+    }
+
+    fun getActiveReadingSession(): Pair<String, Int>? {
+        return repository.getActiveReadingSession()
     }
 
     fun setQuickJumpSheetOpen(open: Boolean) {

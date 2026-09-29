@@ -562,6 +562,32 @@ class MangaRepository(private val context: Context) {
         prefs.edit().putInt("last_read_$mangaId", chapterNumber).apply()
     }
 
+    fun saveActiveReadingSession(mangaId: String, chapterNumber: Int) {
+        saveLastRead(mangaId, chapterNumber)
+        prefs.edit()
+            .putBoolean("is_reading_session_active", true)
+            .putString("active_reading_manga_id", mangaId)
+            .putInt("active_reading_chapter_num", chapterNumber)
+            .apply()
+    }
+
+    fun clearActiveReadingSession() {
+        prefs.edit()
+            .putBoolean("is_reading_session_active", false)
+            .remove("active_reading_manga_id")
+            .remove("active_reading_chapter_num")
+            .apply()
+    }
+
+    fun getActiveReadingSession(): Pair<String, Int>? {
+        val isActive = prefs.getBoolean("is_reading_session_active", false)
+        if (!isActive) return null
+        val mangaId = prefs.getString("active_reading_manga_id", null) ?: return null
+        val chapterNum = prefs.getInt("active_reading_chapter_num", 0)
+        if (chapterNum <= 0) return null
+        return Pair(mangaId, chapterNum)
+    }
+
     fun markChapterAsRead(mangaId: String, chapterNumber: Int) {
         val currentMap = _readChaptersFlow.value.toMutableMap()
         val currentSet = (currentMap[mangaId] ?: loadReadChaptersFromPrefs(mangaId)).toMutableSet()

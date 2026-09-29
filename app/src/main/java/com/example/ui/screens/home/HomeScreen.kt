@@ -848,7 +848,7 @@ fun NexusHomeTopBar(
                 modifier = Modifier.size(42.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.nexus_fox_cosmic_logo_1790348311858),
+                    painter = painterResource(id = R.drawable.nexus_lion_cosmic_logo_1790664517455),
                     contentDescription = "Nexus App Icon",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.1"
-    const val VERSION_CODE = 51
-    const val BUILD_CODENAME = "Nexus Cosmic PRIME"
+    const val VERSION_NAME = "2.1.2"
+    const val VERSION_CODE = 52
+    const val BUILD_CODENAME = "Nexus Lion PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.1.1 PRIME"
+     * Short version string: "v2.1.2 PRIME"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME PRIME"
 
     /**
-     * Build identifier: "Build 51"
+     * Build identifier: "Build 52"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.1.1 PRIME (Build 51) • فريق Nexus"
+     * "الإصدار الرسمي v2.1.2 PRIME (Build 52) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME PRIME (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "شعار ولوجو كوني جديد فائق الأناقة بمواصفات أندرويد القياسية: ثعلب هندسي كوني مفعم بنجوم وسدم الفضاء مع خلفية موحدة نظيفة وخالية من الحواف والإطارات.",
-        "إعادة برمجة وهندسة شريط السمات السريعة الجاهزة بنماذج مثالية ومطابقة 100% للألوان الحقيقية (ذهب إمبراطوري، أزرق ملكي، زمرد ملكي، بنفسجي كوني، أبيض لؤلؤي، وأزرق بحري).",
-        "نافذة منبثقة تفاعلية لمتابعة تنزيل التحديث المباشر من داخل التطبيق لحظة بلحظة بنسبة الإنجاز وسرعة النقل وحجم الملف.",
-        "استوديو المعاينة الحية المطور 2.0 مع تحسينات شاملة لترتيب وتصميم صفحة المظهر والتخصيص.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.1.1 (Build 51) من داخل وخارج التطبيق مع أداء فائق وسرعة استجابة عالية."
+        "حل مشكلة سجل حفظ القراءة ومتابعة الفصول بدقة تامة: الآن عند القراءة المتتالية لفصول متعددة والخروج، يفتح التطبيق مباشرة في آخر فصل تمت قراءته دون العودة للفصل الأول.",
+        "شعار ولوجو كوني جديد فائق الفخامة والأناقة: أسد أوريغامي هندسي كوني مفعم بنجوم وسدم الفضاء مع خلفية سوداء نقية كاملة #000000 بلا حواف أو إطارات.",
+        "مزامنة فورية ودقيقة لمسار التنقل بين الفصول (Navigation Backstack Sync) مع حفظ جلسة القراءة النشطة محلياً وسحابياً.",
+        "إعادة برمجة وهندسة شريط السمات السريعة الجاهزة بنماذج متناسقة ومطابقة 100% للألوان الحقيقية.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.1.2 (Build 52) من داخل وخارج التطبيق مع أعلى معايير الاستقرار والسلاسة."
     )
 }
