@@ -94,6 +94,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -115,7 +116,6 @@ import com.example.ui.components.AdminDashboardDialog
 import com.example.ui.components.AppDownloadProgressDialog
 import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.AuthDialog
-import com.example.ui.components.FavoritesPopupDialog
 import com.example.ui.components.NexusMangaImage
 import com.example.ui.components.StartIoBannerAd
 import com.example.ui.components.SubmitReportDialog
@@ -126,6 +126,7 @@ import com.example.util.UpdateDownloadStatus
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.ui.geometry.Offset
 import com.example.ui.theme.ThemePalettes
+import com.example.ui.theme.GlassmorphicStyle.glassmorphicHeader
 import com.example.ui.theme.BackgroundDark
 import com.example.ui.theme.BadgeNew
 import com.example.ui.theme.NexusGold
@@ -190,6 +191,8 @@ fun HomeScreen(
     onUpdateFooterWaveSpeed: (Int) -> Unit = {},
     onUpdateFooterWaveInterval: (Int) -> Unit = {},
     onUpdateFooterWaveColor: (Int) -> Unit = {},
+    onUpdateFooterWaveEnabled: (Boolean) -> Unit = {},
+    onUpdateGlassmorphismEnabled: (Boolean) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit = {},
     onDeleteAllDownloads: () -> Unit = {},
     onOpenAuthDialog: () -> Unit = {},
@@ -219,7 +222,6 @@ fun HomeScreen(
     onForceSyncAllToGitHub: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var showFavoritesPopup by remember { mutableStateOf(false) }
     val isCosmicAuraActive = uiState.appSettings.cosmicSpaceFooterEnabled && uiState.isCosmicAuraUnlocked
 
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -279,7 +281,6 @@ fun HomeScreen(
             // Universal Nexus Top Bar (App Identity, Cloud Status, Admin Access, Refresh)
             NexusHomeTopBar(
                 selectedTab = uiState.selectedTab,
-                favoritesCount = uiState.favorites.size,
                 hasUpdate = uiState.updateInfo.updateAvailable,
                 isRefreshing = uiState.isRefreshing,
                 currentUser = uiState.currentUser,
@@ -287,8 +288,8 @@ fun HomeScreen(
                 totalReadChapters = uiState.totalReadChaptersCount,
                 isCosmicUnlocked = uiState.isCosmicAuraUnlocked,
                 isCosmicActive = isCosmicAuraActive,
+                glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
                 onToggleCosmicAura = { onUpdateCosmicSpaceFooterEnabled(!uiState.appSettings.cosmicSpaceFooterEnabled) },
-                onFavoritesClick = { showFavoritesPopup = true },
                 onUpdateBadgeClick = onOpenUpdatesDialog,
                 onRefreshClick = onRefresh,
                 onAuthClick = onOpenAuthDialog,
@@ -599,6 +600,8 @@ fun HomeScreen(
                             onUpdateFooterWaveSpeed = onUpdateFooterWaveSpeed,
                             onUpdateFooterWaveInterval = onUpdateFooterWaveInterval,
                             onUpdateFooterWaveColor = onUpdateFooterWaveColor,
+                            onUpdateFooterWaveEnabled = onUpdateFooterWaveEnabled,
+                            onUpdateGlassmorphismEnabled = onUpdateGlassmorphismEnabled,
                             onUpdatePreventChapterCache = onUpdatePreventChapterCache,
                             onDeleteAllDownloads = onDeleteAllDownloads,
                             onOpenAuthDialog = onOpenAuthDialog,
@@ -634,6 +637,8 @@ fun HomeScreen(
                 footerWaveSpeed = uiState.appSettings.footerWaveSpeed,
                 footerWaveInterval = uiState.appSettings.footerWaveInterval,
                 footerWaveColor = uiState.appSettings.footerWaveColor,
+                footerWaveEnabled = uiState.appSettings.footerWaveEnabled,
+                glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
                 onTabSelected = onTabSelected,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -646,16 +651,6 @@ fun HomeScreen(
             exit = fadeOut(animationSpec = tween(400))
         ) {
             NexusPreloadSplashScreen()
-        }
-
-        // Favorites Popup Dialog
-        if (showFavoritesPopup) {
-            FavoritesPopupDialog(
-                favoriteMangaList = uiState.favoriteMangaList,
-                onMangaClick = onMangaClick,
-                onToggleFavorite = onToggleFavorite,
-                onDismiss = { showFavoritesPopup = false }
-            )
         }
 
         // In-App Update Dialog Prompt
@@ -811,7 +806,6 @@ fun HomeScreen(
 @Composable
 fun NexusHomeTopBar(
     selectedTab: Int = 0,
-    favoritesCount: Int = 0,
     hasUpdate: Boolean = false,
     isRefreshing: Boolean = false,
     currentUser: NexusUser? = null,
@@ -819,131 +813,112 @@ fun NexusHomeTopBar(
     totalReadChapters: Int = 0,
     isCosmicUnlocked: Boolean = false,
     isCosmicActive: Boolean = false,
+    glassmorphismEnabled: Boolean = false,
     onToggleCosmicAura: () -> Unit = {},
-    onFavoritesClick: () -> Unit = {},
     onUpdateBadgeClick: () -> Unit = {},
     onRefreshClick: () -> Unit = {},
     onAuthClick: () -> Unit = {},
     onAdminClick: () -> Unit = {},
     onReportClick: () -> Unit = {}
 ) {
-    Row(
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .glassmorphicHeader(
+                enabled = glassmorphismEnabled,
+                surfaceColor = surfaceColor,
+                primaryColor = primaryColor
+            )
     ) {
-        // App Brand & Name with Custom App Icon
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // App Icon Box in Header
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                shadowElevation = 4.dp,
-                modifier = Modifier.size(42.dp)
+            // App Brand & Name with Custom App Icon
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.nexus_lion_cosmic_logo_1790664517455),
-                    contentDescription = "Nexus App Icon",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp))
-                )
-            }
-
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "NEXUS",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.2.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 18.sp
-                        )
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                    ) {
-                        Text(
-                            text = AppVersionConfig.getFullVersionString(),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-                }
-                Text(
-                    text = when (selectedTab) {
-                        1 -> "الأعمال المفضلة والمشاهدة لاحقاً"
-                        2 -> "سجل القراءة الذكي"
-                        3 -> "التحميلات أوفلاين"
-                        4 -> "مركز التحديثات والمميزات"
-                        else -> "بوابة المانهوا والمانغا السحابية"
-                    },
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-                        fontWeight = if (selectedTab == 0) FontWeight.Normal else FontWeight.Bold,
-                        fontSize = 11.sp
-                    )
-                )
-            }
-        }
-
-        // Left Section: Favorites Shortcut & Update Badge
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Favorites Quick Access Button
-            if (favoritesCount > 0) {
+                // App Icon Box in Header
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable { onFavoritesClick() }
-                        .testTag("topbar_favorites_shortcut")
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (glassmorphismEnabled) surfaceColor.copy(alpha = 0.6f) else surfaceColor,
+                    border = BorderStroke(
+                        1.dp,
+                        if (glassmorphismEnabled) primaryColor.copy(alpha = 0.45f) else primaryColor.copy(alpha = 0.30f)
+                    ),
+                    shadowElevation = if (glassmorphismEnabled) 6.dp else 2.dp,
+                    modifier = Modifier.size(42.dp)
                 ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.nexus_lion_cosmic_logo_1790664517455),
+                        contentDescription = "Nexus App Icon",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+
+                Column {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(13.dp)
-                        )
                         Text(
-                            text = "$favoritesCount",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
+                            text = "NEXUS",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.2.sp,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontSize = 11.sp
+                                fontSize = 18.sp
                             )
                         )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = AppVersionConfig.getFullVersionString(),
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
                     }
+                    Text(
+                        text = when (selectedTab) {
+                            1 -> "الأعمال المفضلة والمشاهدة لاحقاً"
+                            2 -> "سجل القراءة الذكي"
+                            3 -> "التحميلات أوفلاين"
+                            4 -> "مركز التحديثات والمميزات"
+                            else -> "بوابة المانهوا والمانغا السحابية"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = if (selectedTab == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                            fontWeight = if (selectedTab == 0) FontWeight.Normal else FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
                 }
             }
 
-            if (hasUpdate) {
+            // Left Section: Action Buttons & Update Badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (hasUpdate) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primary,
@@ -1098,6 +1073,7 @@ fun NexusHomeTopBar(
             }
         }
     }
+}
 }
 
 @Composable
@@ -2086,23 +2062,25 @@ fun NexusPreloadSplashScreen(
         ) {
             // Nexus Logo Emblem with Dynamic Theme Aura
             Surface(
-                shape = CircleShape,
+                shape = RoundedCornerShape(22.dp),
                 color = SurfaceCard,
-                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                shadowElevation = 12.dp,
+                border = BorderStroke(2.dp, Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))),
+                shadowElevation = 16.dp,
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(94.dp)
+                    .graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                    }
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "N",
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 44.sp
-                        )
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.nexus_lion_cosmic_logo_1790664517455),
+                    contentDescription = "Nexus App Logo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(22.dp))
+                )
             }
 
             // Title & Subtitle

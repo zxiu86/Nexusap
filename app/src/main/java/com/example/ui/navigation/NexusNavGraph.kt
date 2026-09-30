@@ -210,6 +210,12 @@ fun NexusNavGraph(
                     onUpdateFooterWaveColor = { color ->
                         viewModel.updateFooterWaveColor(color)
                     },
+                    onUpdateFooterWaveEnabled = { enabled ->
+                        viewModel.updateFooterWaveEnabled(enabled)
+                    },
+                    onUpdateGlassmorphismEnabled = { enabled ->
+                        viewModel.updateGlassmorphismEnabled(enabled)
+                    },
                     onUpdatePreventChapterCache = { prevent ->
                         viewModel.updatePreventChapterCache(prevent)
                     },

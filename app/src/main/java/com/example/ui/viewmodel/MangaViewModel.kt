@@ -1101,6 +1101,14 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         settingsManager.updateFooterWaveColor(color)
     }
 
+    fun updateFooterWaveEnabled(enabled: Boolean) {
+        settingsManager.updateFooterWaveEnabled(enabled)
+    }
+
+    fun updateGlassmorphismEnabled(enabled: Boolean) {
+        settingsManager.updateGlassmorphismEnabled(enabled)
+    }
+
     fun updatePreventChapterCache(prevent: Boolean) {
         settingsManager.updatePreventChapterCache(prevent)
     }

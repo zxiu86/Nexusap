@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.2"
-    const val VERSION_CODE = 52
-    const val BUILD_CODENAME = "Nexus Lion PRIME"
+    const val VERSION_NAME = "2.1.3"
+    const val VERSION_CODE = 53
+    const val BUILD_CODENAME = "Nexus Glassmorphism PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "سبتمبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.1.2 PRIME"
+     * Short version string: "v2.1.3 PRIME"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME PRIME"
 
     /**
-     * Build identifier: "Build 52"
+     * Build identifier: "Build 53"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.1.2 PRIME (Build 52) • فريق Nexus"
+     * "الإصدار الرسمي v2.1.3 PRIME (Build 53) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME PRIME (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "حل مشكلة سجل حفظ القراءة ومتابعة الفصول بدقة تامة: الآن عند القراءة المتتالية لفصول متعددة والخروج، يفتح التطبيق مباشرة في آخر فصل تمت قراءته دون العودة للفصل الأول.",
-        "شعار ولوجو كوني جديد فائق الفخامة والأناقة: أسد أوريغامي هندسي كوني مفعم بنجوم وسدم الفضاء مع خلفية سوداء نقية كاملة #000000 بلا حواف أو إطارات.",
-        "مزامنة فورية ودقيقة لمسار التنقل بين الفصول (Navigation Backstack Sync) مع حفظ جلسة القراءة النشطة محلياً وسحابياً.",
-        "إعادة برمجة وهندسة شريط السمات السريعة الجاهزة بنماذج متناسقة ومطابقة 100% للألوان الحقيقية.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.1.2 (Build 52) من داخل وخارج التطبيق مع أعلى معايير الاستقرار والسلاسة."
+        "إزالة زر المفضلة والنافذة المنبثقة من الهيدر لتصميم انسيابي مريح وبسيط بدون تشتيت.",
+        "إضافة زر إيقاف وتشغيل التموج اللوني لشريط الفوتر (Footer Wave Toggle) مع تحكم كامل فوري.",
+        "إضافة مفتاح تفعيل المظهر الزجاجي الفاخر الشفاف (Glassmorphism) على الهيدر والفوتر في الرئيسية وشاشة القراءة.",
+        "استبدال حرف N في شاشة التحميل التمهيدي الأولى بشعار الأسد الكوني الرسمي الفخم للتطبيق.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.1.3 (Build 53) من داخل وخارج التطبيق مع تحسينات شاملة."
     )
 }

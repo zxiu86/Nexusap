@@ -125,6 +125,8 @@ import com.example.data.model.PageWatermarkData
 import com.example.ui.components.StartIoBannerAd
 import com.example.util.StartIoAdManager
 import com.example.ui.theme.BadgeNew
+import com.example.ui.theme.GlassmorphicStyle.glassmorphicReaderTop
+import com.example.ui.theme.GlassmorphicStyle.glassmorphicReaderBottom
 import com.example.ui.viewmodel.ReaderUiState
 import kotlin.math.roundToInt
 
@@ -503,6 +505,7 @@ fun ReaderScreen(
                 mangaTitle = manga.titleAr,
                 chapterTitle = "الفصل ${chapter.number}",
                 isDownloaded = uiState.isDownloaded,
+                glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
                 onNavigateHome = onNavigateHome,
                 onNavigateBack = onNavigateBackToDetails,
                 isFavorite = uiState.isFavorite,
@@ -522,6 +525,7 @@ fun ReaderScreen(
                 totalChapters = manga.totalChaptersCount,
                 hasPrevious = uiState.hasPreviousChapter,
                 hasNext = uiState.hasNextChapter,
+                glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
                 onPreviousChapter = onPreviousChapter,
                 onNextChapter = handleNextChapter,
                 onOpenQuickJump = { onSetQuickJumpOpen(true) },
@@ -557,26 +561,24 @@ fun ReaderTopBar(
     mangaTitle: String,
     chapterTitle: String,
     isDownloaded: Boolean,
+    glassmorphismEnabled: Boolean = false,
     onNavigateHome: () -> Unit,
     onNavigateBack: () -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit
 ) {
-    Surface(
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("reader_top_bar"),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
-        border = BorderStroke(
-            1.dp,
-            Brush.horizontalGradient(
-                listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
-                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
-                )
+            .glassmorphicReaderTop(
+                enabled = glassmorphismEnabled,
+                surfaceColor = surfaceColor,
+                primaryColor = primaryColor
             )
-        ),
-        shadowElevation = 8.dp
+            .testTag("reader_top_bar")
     ) {
         Row(
             modifier = Modifier
@@ -702,27 +704,25 @@ fun ReaderBottomBar(
     totalChapters: Int,
     hasPrevious: Boolean,
     hasNext: Boolean,
+    glassmorphismEnabled: Boolean = false,
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
     onOpenQuickJump: () -> Unit,
     currentPage: Int,
     totalPages: Int
 ) {
-    Surface(
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("reader_bottom_bar"),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
-        border = BorderStroke(
-            1.dp,
-            Brush.horizontalGradient(
-                listOf(
-                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f),
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                )
+            .glassmorphicReaderBottom(
+                enabled = glassmorphismEnabled,
+                surfaceColor = surfaceColor,
+                primaryColor = primaryColor
             )
-        ),
-        shadowElevation = 8.dp
+            .testTag("reader_bottom_bar")
     ) {
         Column(
             modifier = Modifier

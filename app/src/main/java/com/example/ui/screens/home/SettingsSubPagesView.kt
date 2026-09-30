@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -112,6 +113,7 @@ import com.example.ui.theme.HarmattanTypography
 import com.example.ui.theme.NexusGold
 import com.example.ui.theme.NexusOrange
 import com.example.ui.theme.ThemePalettes
+import com.example.ui.theme.GlassmorphicStyle.glassmorphicCard
 import com.example.ui.viewmodel.HomeUiState
 import com.example.util.AppVersionConfig
 
@@ -194,6 +196,8 @@ fun SettingsModernContainer(
     onUpdateFooterWaveSpeed: (Int) -> Unit = {},
     onUpdateFooterWaveInterval: (Int) -> Unit = {},
     onUpdateFooterWaveColor: (Int) -> Unit = {},
+    onUpdateFooterWaveEnabled: (Boolean) -> Unit = {},
+    onUpdateGlassmorphismEnabled: (Boolean) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit = {},
     onDeleteAllDownloads: () -> Unit = {},
     onOpenAuthDialog: () -> Unit = {},
@@ -270,6 +274,8 @@ fun SettingsModernContainer(
                             onUpdateFooterWaveSpeed = onUpdateFooterWaveSpeed,
                             onUpdateFooterWaveInterval = onUpdateFooterWaveInterval,
                             onUpdateFooterWaveColor = onUpdateFooterWaveColor,
+                            onUpdateFooterWaveEnabled = onUpdateFooterWaveEnabled,
+                            onUpdateGlassmorphismEnabled = onUpdateGlassmorphismEnabled,
                             onUpdatePreventChapterCache = onUpdatePreventChapterCache,
                             onOpenAuthDialog = onOpenAuthDialog,
                             onOpenAdminDialog = onOpenAdminDialog,
@@ -607,6 +613,8 @@ private fun SettingsSubPageDetailView(
     onUpdateFooterWaveSpeed: (Int) -> Unit = {},
     onUpdateFooterWaveInterval: (Int) -> Unit = {},
     onUpdateFooterWaveColor: (Int) -> Unit = {},
+    onUpdateFooterWaveEnabled: (Boolean) -> Unit = {},
+    onUpdateGlassmorphismEnabled: (Boolean) -> Unit = {},
     onUpdatePreventChapterCache: (Boolean) -> Unit,
     onOpenAuthDialog: () -> Unit,
     onOpenAdminDialog: () -> Unit,
@@ -680,7 +688,9 @@ private fun SettingsSubPageDetailView(
                         onUpdateCosmicSpaceFooterEnabled = onUpdateCosmicSpaceFooterEnabled,
                         onUpdateFooterWaveSpeed = onUpdateFooterWaveSpeed,
                         onUpdateFooterWaveInterval = onUpdateFooterWaveInterval,
-                        onUpdateFooterWaveColor = onUpdateFooterWaveColor
+                        onUpdateFooterWaveColor = onUpdateFooterWaveColor,
+                        onUpdateFooterWaveEnabled = onUpdateFooterWaveEnabled,
+                        onUpdateGlassmorphismEnabled = onUpdateGlassmorphismEnabled
                     )
                 }
             }
@@ -767,7 +777,9 @@ private fun AppearanceSubPage(
     onUpdateCosmicSpaceFooterEnabled: (Boolean) -> Unit,
     onUpdateFooterWaveSpeed: (Int) -> Unit,
     onUpdateFooterWaveInterval: (Int) -> Unit,
-    onUpdateFooterWaveColor: (Int) -> Unit
+    onUpdateFooterWaveColor: (Int) -> Unit,
+    onUpdateFooterWaveEnabled: (Boolean) -> Unit,
+    onUpdateGlassmorphismEnabled: (Boolean) -> Unit
 ) {
     val themeMode = uiState.appSettings.themeMode
     val accentColor = uiState.appSettings.accentColor
@@ -777,6 +789,8 @@ private fun AppearanceSubPage(
     val footerWaveSpeed = uiState.appSettings.footerWaveSpeed
     val footerWaveInterval = uiState.appSettings.footerWaveInterval
     val footerWaveColor = uiState.appSettings.footerWaveColor
+    val footerWaveEnabled = uiState.appSettings.footerWaveEnabled
+    val glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled
     val isCosmicUnlocked = uiState.isCosmicAuraUnlocked
     val totalRead = uiState.totalReadChaptersCount
 
@@ -1375,7 +1389,7 @@ private fun AppearanceSubPage(
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header with Badge
+                // Header with Badge & Toggle Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1383,7 +1397,8 @@ private fun AppearanceSubPage(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Surface(
                             shape = CircleShape,
@@ -1415,12 +1430,12 @@ private fun AppearanceSubPage(
                                 )
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = accentPrimary
+                                    color = if (footerWaveEnabled) accentPrimary else MaterialTheme.colorScheme.surfaceVariant
                                 ) {
                                     Text(
-                                        text = "تفاعلي ✨",
+                                        text = if (footerWaveEnabled) "مفعّلة 🌊" else "معطّلة ⏸️",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color.White,
+                                            color = if (footerWaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 9.sp
                                         ),
@@ -1429,7 +1444,7 @@ private fun AppearanceSubPage(
                                 }
                             }
                             Text(
-                                text = "تحكم في سرعة مرور التموج، وسرعة ظهوره في كل دورة، ولونه",
+                                text = if (footerWaveEnabled) "تحكم في سرعة مرور التموج، وسرعة ظهوره في كل دورة، ولونه" else "تم إيقاف تشغيل موجة الفوتر (انقر المفتاح للتفعيل)",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1437,6 +1452,16 @@ private fun AppearanceSubPage(
                             )
                         }
                     }
+
+                    Switch(
+                        checked = footerWaveEnabled,
+                        onCheckedChange = onUpdateFooterWaveEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = accentPrimary
+                        ),
+                        modifier = Modifier.testTag("switch_footer_wave_toggle")
+                    )
                 }
 
                 // Section A: Wave Color Selection
@@ -1681,7 +1706,150 @@ private fun AppearanceSubPage(
             }
         }
 
-        // 🎨 6. Background Style & Card Effects Card (نمط خلفية التطبيق وتأثيرات الإطارات)
+        // 💎 6. Glassmorphism Card (المظهر الزجاجي الفاخر الشفاف)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .glassmorphicCard(
+                    enabled = glassmorphismEnabled,
+                    surfaceColor = MaterialTheme.colorScheme.surface,
+                    primaryColor = accentPrimary,
+                    shape = RoundedCornerShape(22.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = accentPrimary.copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, accentPrimary.copy(alpha = 0.35f)),
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = accentPrimary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "المظهر الزجاجي الشفاف (Glassmorphism)",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (glassmorphismEnabled) accentPrimary else MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = if (glassmorphismEnabled) "مفعّل ✨" else "متوقف",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (glassmorphismEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "تأثير بلوري زجاجي شبه شفاف مع حواف ضوئية وتدرجات انسيابية على الهيدر والفوتر وفي شاشة القراءة",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = glassmorphismEnabled,
+                        onCheckedChange = onUpdateGlassmorphismEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = accentPrimary
+                        ),
+                        modifier = Modifier.testTag("switch_glassmorphism_enabled")
+                    )
+                }
+
+                // Mini Glass Preview Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .glassmorphicCard(
+                            enabled = glassmorphismEnabled,
+                            surfaceColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            primaryColor = accentPrimary,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(accentPrimary.copy(alpha = 0.2f))
+                                    .border(1.dp, accentPrimary, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (glassmorphismEnabled) Icons.Default.Check else Icons.Default.Layers,
+                                    contentDescription = null,
+                                    tint = accentPrimary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Text(
+                                text = if (glassmorphismEnabled) "تأثير الزجاج البلوري نشط الآن على الهيدر والفوتر والقارئ" else "انقر المفتاح لتفعيل المظهر الزجاجي الفاخر",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (glassmorphismEnabled) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (glassmorphismEnabled) accentPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 🎨 7. Background Style & Card Effects Card (نمط خلفية التطبيق وتأثيرات الإطارات)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

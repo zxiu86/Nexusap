@@ -172,6 +172,7 @@ import com.example.data.model.ReadingHistoryEntry
 import com.example.ui.components.NexusMangaImage
 import com.example.ui.theme.HarmattanFontFamily
 import com.example.ui.theme.ThemePalettes
+import com.example.ui.theme.GlassmorphicStyle.glassmorphicFooter
 import com.example.ui.theme.HarmattanTypography
 import com.example.ui.theme.BackgroundDark
 import com.example.ui.theme.BackgroundAmoled
@@ -361,11 +362,14 @@ fun NexusBottomFooterBar(
     footerWaveSpeed: Int = 1,
     footerWaveInterval: Int = 2,
     footerWaveColor: Int = 0,
+    footerWaveEnabled: Boolean = true,
+    glassmorphismEnabled: Boolean = false,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accentPrimary = MaterialTheme.colorScheme.primary
     val accentSecondary = MaterialTheme.colorScheme.secondary
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     Box(
         modifier = modifier
@@ -373,33 +377,28 @@ fun NexusBottomFooterBar(
             .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 12.dp)
             .testTag("nexus_bottom_footer_bar")
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-            border = BorderStroke(
-                1.2.dp,
-                Brush.horizontalGradient(
-                    listOf(
-                        accentPrimary.copy(alpha = 0.45f),
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                        accentSecondary.copy(alpha = 0.45f)
-                    )
-                )
-            ),
-            shadowElevation = 14.dp,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .glassmorphicFooter(
+                    enabled = glassmorphismEnabled,
+                    surfaceColor = surfaceColor,
+                    primaryColor = accentPrimary,
+                    secondaryColor = accentSecondary,
+                    shape = RoundedCornerShape(26.dp)
+                )
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
-                // 🌊 Fast cosmetic ripple wave layer (تطبيق مباشر وفوري لكافة إعدادات السرعة واللون والتكرار)
-                FooterWaveAnimationLayer(
-                    footerWaveSpeed = footerWaveSpeed,
-                    footerWaveInterval = footerWaveInterval,
-                    footerWaveColor = footerWaveColor,
-                    accentColor = accentColor,
-                    modifier = Modifier.matchParentSize()
-                )
+                // 🌊 Fast cosmetic ripple wave layer (تطبيق مباشر وفوري لكافة إعدادات السرعة واللون والتكرار عند التفعيل)
+                if (footerWaveEnabled) {
+                    FooterWaveAnimationLayer(
+                        footerWaveSpeed = footerWaveSpeed,
+                        footerWaveInterval = footerWaveInterval,
+                        footerWaveColor = footerWaveColor,
+                        accentColor = accentColor,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
 
                 Row(
                     modifier = Modifier

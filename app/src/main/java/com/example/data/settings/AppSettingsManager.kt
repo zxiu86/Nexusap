@@ -23,7 +23,9 @@ data class AppSettings(
     val cosmicSpaceFooterEnabled: Boolean = true, // Legendary Cosmic Space Footer Aura (unlocked at 500 chapters or admin)
     val footerWaveSpeed: Int = 1, // 0: هادئ (2200ms), 1: متوازن (1200ms), 2: سريع (800ms), 3: فائق (500ms)
     val footerWaveInterval: Int = 2, // 0: مستمر (600ms), 1: متكرر (1500ms), 2: متوازن (3000ms), 3: متباعد (5000ms)
-    val footerWaveColor: Int = 0 // 0: حسب سمة التطبيق, 1: أبيض كريستالي أنيق, 2: أورورا نيون, 3: شفق ذهبي ملكي, 4: بنفسجي كوني, 5: زمردي نيون, 6: وردي أزهار الكرز, 7: طيف نيون متعدد
+    val footerWaveColor: Int = 0, // 0: حسب سمة التطبيق, 1: أبيض كريستالي أنيق, 2: أورورا نيون, 3: شفق ذهبي ملكي, 4: بنفسجي كوني, 5: زمردي نيون, 6: وردي أزهار الكرز, 7: طيف نيون متعدد
+    val footerWaveEnabled: Boolean = true, // زر إيقاف أو تشغيل موجة الفوتر
+    val glassmorphismEnabled: Boolean = false // المظهر الزجاجي الفاخر الشفاف (Glassmorphism)
 )
 
 class AppSettingsManager private constructor(context: Context) {
@@ -47,7 +49,9 @@ class AppSettingsManager private constructor(context: Context) {
             cosmicSpaceFooterEnabled = prefs.getBoolean(KEY_COSMIC_SPACE_FOOTER_ENABLED, prefs.getBoolean("pref_cosmic_space_header_enabled", true)),
             footerWaveSpeed = prefs.getInt(KEY_FOOTER_WAVE_SPEED, 1),
             footerWaveInterval = prefs.getInt(KEY_FOOTER_WAVE_INTERVAL, 2),
-            footerWaveColor = prefs.getInt(KEY_FOOTER_WAVE_COLOR, 0)
+            footerWaveColor = prefs.getInt(KEY_FOOTER_WAVE_COLOR, 0),
+            footerWaveEnabled = prefs.getBoolean(KEY_FOOTER_WAVE_ENABLED, true),
+            glassmorphismEnabled = prefs.getBoolean(KEY_GLASSMORPHISM_ENABLED, false)
         )
     }
 
@@ -121,6 +125,16 @@ class AppSettingsManager private constructor(context: Context) {
         _settingsFlow.value = _settingsFlow.value.copy(footerWaveColor = color)
     }
 
+    fun updateFooterWaveEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FOOTER_WAVE_ENABLED, enabled).apply()
+        _settingsFlow.value = _settingsFlow.value.copy(footerWaveEnabled = enabled)
+    }
+
+    fun updateGlassmorphismEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GLASSMORPHISM_ENABLED, enabled).apply()
+        _settingsFlow.value = _settingsFlow.value.copy(glassmorphismEnabled = enabled)
+    }
+
     fun getCalculatedCacheSize(context: Context): String {
         val bytes = calculateDirSize(context.cacheDir) + calculateDirSize(context.externalCacheDir)
         val mb = bytes.toDouble() / (1024 * 1024)
@@ -176,6 +190,8 @@ class AppSettingsManager private constructor(context: Context) {
         private const val KEY_FOOTER_WAVE_SPEED = "pref_footer_wave_speed"
         private const val KEY_FOOTER_WAVE_INTERVAL = "pref_footer_wave_interval"
         private const val KEY_FOOTER_WAVE_COLOR = "pref_footer_wave_color"
+        private const val KEY_FOOTER_WAVE_ENABLED = "pref_footer_wave_enabled"
+        private const val KEY_GLASSMORPHISM_ENABLED = "pref_glassmorphism_enabled"
 
         @Volatile
         private var INSTANCE: AppSettingsManager? = null
