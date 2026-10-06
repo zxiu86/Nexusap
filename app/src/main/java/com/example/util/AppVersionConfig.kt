@@ -7,20 +7,20 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.4"
-    const val VERSION_CODE = 54
+    const val VERSION_NAME = "2.1.5"
+    const val VERSION_CODE = 55
     const val BUILD_CODENAME = "Nexus Glassmorphism PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "أكتوبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
-     * Short version string: "v2.1.3 PRIME"
+     * Short version string: "v2.1.5 PRIME"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME PRIME"
 
     /**
-     * Build identifier: "Build 53"
+     * Build identifier: "Build 55"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +36,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v2.1.3 PRIME (Build 53) • فريق Nexus"
+     * "الإصدار الرسمي v2.1.5 PRIME (Build 55) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME PRIME (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +55,11 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "تفعيل حماية خصوصية المحتوى ومنع تصوير الشاشة وتسجيل الفيديو في صفحة القراءة بنجاح.",
-        "تثبيت وضع ملء الشاشة والانغماس الكامل عند الانتقال للفصل التالي ومنع ظهور أشرطة النظام.",
-        "فتح التطبيق دائماً على الصفحة الرئيسية عند إعادة التشغيل مع استمرار حفظ ومزامنة سجل القراءة.",
-        "ربط إصدار صفحة التحديثات مركزياً بمصدر بيانات موحد مع إزالة زر التليجرام.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.1.4 (Build 54) من داخل وخارج التطبيق مع تحسينات شاملة للأداء."
+        "نظام تنظيف تلقائي فائق في الخلفية مرتبط مباشرة بالفصل المفتوح بدون أي إزعاج للقارئ.",
+        "تنظيف دقيق بوضع طبقة بيضاء متناهية الدقة لإزالة كلمات وعناوين موقع تيمكس وتيم اكس و olympustaff.com.",
+        "تحقق ذكي: عدم تفعيل آلية التنظيف إذا كان الفصل منظفاً مسبقاً وتفعيلها الفوري للفصول غير المنظفة.",
+        "ربط نظام الإحداثيات بمستودع zxiu86/Coordinates بتنظيم مجلد لكل عمل ومجلد لكل فصل.",
+        "نظام الرفع المجمع (Batch Commit) لرفع كل 30 فصلاً في كوميت واحد لحماية الحساب من قيود GitHub.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.1.5 (Build 55) مع تسريع محرك المعالجة واستقرار كامل للأداء."
     )
 }

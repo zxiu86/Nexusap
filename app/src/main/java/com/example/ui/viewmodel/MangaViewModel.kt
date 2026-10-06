@@ -570,15 +570,7 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Trigger smart watermark cleaner bot as soon as manga list is loaded
-        viewModelScope.launch {
-            repository.allMangaFlow.collect { list ->
-                if (list.isNotEmpty()) {
-                    com.example.util.WatermarkCleanerBot.startBackgroundBot(getApplication(), list)
-                }
-            }
-        }
-
+        // Note: Watermark cleaner runs on-demand exclusively for the chapter opened by the user
         // Reactively observe repo changes to keep active details screen updated silently
         viewModelScope.launch {
             settingsManager.settingsFlow.collect { newSettings ->
@@ -975,21 +967,43 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                 isDownloaded = repository.isChapterDownloaded(mangaId, chapterNumber)
             )
 
-            // If coordinates were not found on GitHub or cache, process on-demand in background
+            // 🎯 Automated Background Cleaning Mechanism:
+            // إذا كان الفصل منظفاً من قبل (موجود محلياً أو في مستودع zxiu86/Coordinates): لا يتم تفعيل آلية التنظيف!
+            // إذا كان غير منظف: يتم تشغيل آلية التنظيف الفائقة في الخلفية مباشرة بدون أي إزعاج للمستخدم.
             if (existingCoords == null && fullChapter != null && fullChapter.pages.isNotEmpty()) {
-                launch(Dispatchers.IO) {
-                    val computed = com.example.util.WatermarkCleanerBot.processSingleChapterOnDemand(
-                        getApplication(),
-                        mangaId,
-                        fullChapter
-                    )
-                    if (computed != null && _readerUiState.value.currentChapter?.number == chapterNumber) {
-                        _readerUiState.value = _readerUiState.value.copy(coordinates = computed)
+                com.example.util.WatermarkCleanerBot.cleanChapterSilently(
+                    context = getApplication(),
+                    seriesSlug = mangaId,
+                    chapter = fullChapter,
+                    onCleaned = { computed ->
+                        if (_readerUiState.value.currentChapter?.number == chapterNumber &&
+                            _readerUiState.value.manga?.id == mangaId
+                        ) {
+                            _readerUiState.value = _readerUiState.value.copy(coordinates = computed)
+                        }
                     }
-                }
+                )
             }
 
             // Note: Chapter is marked as read and registered to history only after 6 seconds of reading
+        }
+    }
+
+    /**
+     * Batch Coordinates upload queue count (accumulates up to 30 chapters before 1 single commit)
+     */
+    val pendingCoordinatesBatchCount = com.example.data.repository.CoordinatesRepository.getInstance(application.applicationContext).pendingQueueCount
+
+    fun flushCoordinatesBatchNow(onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            val repo = com.example.data.repository.CoordinatesRepository.getInstance(getApplication())
+            val res = repo.flushPendingBatchNow()
+            if (res.isSuccess) {
+                val count = res.getOrDefault(0)
+                onFinished(true, "تم رفع $count فصل مجمعاً في كوميت واحد بنجاح!")
+            } else {
+                onFinished(false, res.exceptionOrNull()?.message ?: "فشل الرفع المجمع")
+            }
         }
     }
 

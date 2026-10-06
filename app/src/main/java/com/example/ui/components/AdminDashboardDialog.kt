@@ -86,6 +86,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.example.util.AppVersionConfig
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Visibility
@@ -958,6 +962,85 @@ fun AdminDashboardDialog(
                                         modifier = Modifier.padding(10.dp),
                                         lineHeight = 16.sp
                                     )
+                                }
+                            }
+
+                            // 🎯 Coordinates Repository & Batch Upload Card (zxiu86/Coordinates)
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = SurfaceElevated,
+                                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = Color(0xFF38BDF8),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "نظام التنظيف التلقائي الذكي للإحداثيات",
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "المستودع الهدف: https://github.com/zxiu86/Coordinates\nالهيكلية: {العمل}/{الفصل}/coordinates.json\nالكلمات المنظفة: موقع تيمكس، تيم اكس، olympustaff.com، https//:olympustaff.com\nالآلية: طبقة بيضاء فائقة الدقة تُنشأ فور فتح الفصل غير المنظف وتُرفع مجمعة كل 30 فصلاً في كوميت واحد.",
+                                        fontSize = 10.5.sp,
+                                        color = TextSecondary,
+                                        lineHeight = 15.sp
+                                    )
+
+                                    val pendingBatchCount by com.example.data.repository.CoordinatesRepository.getInstance(context).pendingQueueCount.collectAsStateWithLifecycle(0)
+                                    var isFlushingCoords by remember { mutableStateOf(false) }
+                                    val coroutineScope = rememberCoroutineScope()
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "الفصول المعلقة للرفع المجمع: $pendingBatchCount / 30",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (pendingBatchCount >= 30) Color(0xFF10B981) else TextPrimary
+                                        )
+
+                                        Button(
+                                            onClick = {
+                                                isFlushingCoords = true
+                                                coroutineScope.launch {
+                                                    val res = com.example.data.repository.CoordinatesRepository.getInstance(context).flushPendingBatchNow()
+                                                    isFlushingCoords = false
+                                                    if (res.isSuccess) {
+                                                        val count = res.getOrDefault(0)
+                                                        Toast.makeText(context, "تم رفع $count فصل في كوميت واحد بنجاح!", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "فشل الرفع: ${res.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            },
+                                            enabled = !isFlushingCoords && pendingBatchCount > 0,
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            if (isFlushingCoords) {
+                                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.Black, strokeWidth = 2.dp)
+                                            } else {
+                                                Text("رفع الآن بكوميت واحد", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
                                 }
                             }
 

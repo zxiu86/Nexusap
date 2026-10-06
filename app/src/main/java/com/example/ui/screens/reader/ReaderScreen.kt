@@ -1051,7 +1051,7 @@ fun ComicPageItem(
                 }
             }
 
-            // 🎯 Smart Watermark Clean Overlays (White box + "تطبيق Nexus")
+            // 🎯 Ultra-Precise White Layer Watermark Clean Overlays (طبقة بيضاء دقيقة جداً فوق الكلمات المستهدفة)
             if (isLoaded && watermarkData != null && watermarkData.boxes.isNotEmpty() && imageSize.width > 0 && imageSize.height > 0) {
                 val density = LocalDensity.current
                 watermarkData.boxes.forEach { box ->
@@ -1060,33 +1060,13 @@ fun ComicPageItem(
                     val widthDp = with(density) { (box.width * imageSize.width).toDp() }
                     val heightDp = with(density) { (box.height * imageSize.height).toDp() }
 
-                    Surface(
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .offset(x = leftDp, y = topDp)
-                            .size(width = widthDp, height = heightDp),
-                        color = Color.White,
-                        shape = RoundedCornerShape(1.dp),
-                        shadowElevation = 0.dp
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.White)
-                                .padding(horizontal = 2.dp, vertical = 1.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = watermarkData.replacementText.ifBlank { "تطبيق Nexus" },
-                                color = Color(0xFF0F172A),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                            .size(width = widthDp, height = heightDp)
+                            .background(Color.White)
+                    )
                 }
             }
 

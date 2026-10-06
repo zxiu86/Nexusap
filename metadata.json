@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "description": "تطبيق Nexus الإصدار 2.1.4 مع حماية الخصوصية ومنع لقطات الشاشة في القارئ، تثبيت وضع ملء الشاشة عند الانتقال للفصل التالي، فتح التطبيق على الرئيسية مع حفظ السجل، وربط الإصدار مركزياً",
+  "description": "تطبيق Nexus الإصدار 2.1.5 مع نظام تنظيف تلقائي فائق مرتبط بالفصل المفتوح، تنظيف دقيق بطبقة بيضاء لكلمات تيمكس و olympustaff، مزامنة zxiu86/Coordinates، ورفع مجمع كل 30 فصلاً في كوميت واحد",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
