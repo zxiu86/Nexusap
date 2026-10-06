@@ -7,7 +7,7 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "1.2.6"
+    const val VERSION_NAME = "2.1.6"
     const val VERSION_CODE = 56
     const val BUILD_CODENAME = "Nexus Glassmorphism PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
