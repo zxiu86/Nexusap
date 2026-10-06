@@ -1,7 +1,12 @@
 package com.example.ui.screens.reader
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.WindowManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -130,6 +135,15 @@ import com.example.ui.theme.GlassmorphicStyle.glassmorphicReaderBottom
 import com.example.ui.viewmodel.ReaderUiState
 import kotlin.math.roundToInt
 
+private fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
@@ -146,6 +160,8 @@ fun ReaderScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val window = activity?.window
     val manga = uiState.manga
     val chapter = uiState.currentChapter
     val listState = rememberLazyListState()
@@ -162,20 +178,25 @@ fun ReaderScreen(
     }
 
     // 🔒 SCREEN SECURITY (FLAG_SECURE) & IMMERSIVE FULL-SCREEN
-    DisposableEffect(Unit) {
-        val window = (context as? Activity)?.window
+    DisposableEffect(activity) {
+        val currentWindow = activity?.window
         // Prevent screen capture / screenshots to protect intellectual property
-        window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        currentWindow?.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
         // Set Immersive Mode
-        val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        val insetsController = currentWindow?.let { WindowCompat.getInsetsController(it, it.decorView) }
         insetsController?.apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsetsCompat.Type.systemBars())
+            if (!showControls) {
+                hide(WindowInsetsCompat.Type.systemBars())
+            }
         }
 
         onDispose {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            currentWindow?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             insetsController?.show(WindowInsetsCompat.Type.systemBars())
         }
     }
@@ -202,8 +223,7 @@ fun ReaderScreen(
 
     // 💡 إبقاء الشاشة مفعلة أثناء القراءة (Keep Screen On)
     val keepScreenOn = uiState.appSettings.keepScreenOn
-    DisposableEffect(keepScreenOn) {
-        val window = (context as? Activity)?.window
+    DisposableEffect(keepScreenOn, window) {
         if (keepScreenOn) {
             window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
@@ -214,14 +234,36 @@ fun ReaderScreen(
         }
     }
 
-    // Toggle system bars visibility alongside showControls
-    LaunchedEffect(showControls) {
-        val window = (context as? Activity)?.window
+    // Toggle system bars visibility alongside showControls and chapter transitions
+    LaunchedEffect(showControls, chapter?.number, window) {
         val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        insetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (showControls) {
             insetsController?.show(WindowInsetsCompat.Type.systemBars())
         } else {
             insetsController?.hide(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    // Maintain FLAG_SECURE and full-screen immersive mode when app resumes (e.g. from background or ad return)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, showControls, window) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                window?.setFlags(
+                    WindowManager.LayoutParams.FLAG_SECURE,
+                    WindowManager.LayoutParams.FLAG_SECURE
+                )
+                val insetsController = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+                insetsController?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (!showControls) {
+                    insetsController?.hide(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

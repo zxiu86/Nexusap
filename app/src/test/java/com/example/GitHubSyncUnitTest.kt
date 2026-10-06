@@ -17,7 +17,7 @@ class GitHubSyncUnitTest {
 
     @Test
     fun testVersionMatchesCurrentVersion() {
-        assertEquals("2.0.9", com.example.util.AppVersionConfig.VERSION_NAME)
-        assertEquals(49, com.example.util.AppVersionConfig.VERSION_CODE)
+        assertEquals("2.1.4", com.example.util.AppVersionConfig.VERSION_NAME)
+        assertEquals(54, com.example.util.AppVersionConfig.VERSION_CODE)
     }
 }

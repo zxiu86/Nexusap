@@ -42,18 +42,6 @@ fun NexusNavGraph(
 ) {
     val favoriteToast by viewModel.favoriteToast.collectAsState()
 
-    // Automatic resume to active reading chapter on app start
-    LaunchedEffect(Unit) {
-        val activeSession = viewModel.getActiveReadingSession()
-        if (activeSession != null) {
-            val (mangaId, chapterNum) = activeSession
-            navController.navigate(NexusDestinations.detailsRoute(mangaId)) {
-                popUpTo(NexusDestinations.HOME)
-            }
-            navController.navigate(NexusDestinations.readerRoute(mangaId, chapterNum))
-        }
-    }
-
     // Provide Right-to-Left (RTL) layout direction natively for Arabic interface
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = modifier.fillMaxSize()) {
@@ -384,11 +372,7 @@ fun NexusNavGraph(
                         if (currentNum > 1) {
                             val prevNum = currentNum - 1
                             viewModel.saveActiveReadingSession(mangaId, prevNum)
-                            navController.navigate(NexusDestinations.readerRoute(mangaId, prevNum)) {
-                                popUpTo(NexusDestinations.readerRoute(mangaId, chapterNumber)) {
-                                    inclusive = true
-                                }
-                            }
+                            viewModel.loadChapter(mangaId, prevNum)
                         }
                     },
                     onNextChapter = {
@@ -397,20 +381,12 @@ fun NexusNavGraph(
                         if (currentNum < total) {
                             val nextNum = currentNum + 1
                             viewModel.saveActiveReadingSession(mangaId, nextNum)
-                            navController.navigate(NexusDestinations.readerRoute(mangaId, nextNum)) {
-                                popUpTo(NexusDestinations.readerRoute(mangaId, chapterNumber)) {
-                                    inclusive = true
-                                }
-                            }
+                            viewModel.loadChapter(mangaId, nextNum)
                         }
                     },
                     onSelectChapter = { num ->
                         viewModel.saveActiveReadingSession(mangaId, num)
-                        navController.navigate(NexusDestinations.readerRoute(mangaId, num)) {
-                            popUpTo(NexusDestinations.readerRoute(mangaId, chapterNumber)) {
-                                inclusive = true
-                            }
-                        }
+                        viewModel.loadChapter(mangaId, num)
                     },
                     onToggleFavorite = {
                         viewModel.toggleFavorite(mangaId)

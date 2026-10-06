@@ -7,11 +7,11 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.3"
-    const val VERSION_CODE = 53
+    const val VERSION_NAME = "2.1.4"
+    const val VERSION_CODE = 54
     const val BUILD_CODENAME = "Nexus Glassmorphism PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
-    const val RELEASE_DATE = "سبتمبر 2026"
+    const val RELEASE_DATE = "أكتوبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
 
     /**
@@ -55,10 +55,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "إزالة زر المفضلة والنافذة المنبثقة من الهيدر لتصميم انسيابي مريح وبسيط بدون تشتيت.",
-        "إضافة زر إيقاف وتشغيل التموج اللوني لشريط الفوتر (Footer Wave Toggle) مع تحكم كامل فوري.",
-        "إضافة مفتاح تفعيل المظهر الزجاجي الفاخر الشفاف (Glassmorphism) على الهيدر والفوتر في الرئيسية وشاشة القراءة.",
-        "استبدال حرف N في شاشة التحميل التمهيدي الأولى بشعار الأسد الكوني الرسمي الفخم للتطبيق.",
-        "ترقية إصدار التطبيق رسمياً إلى 2.1.3 (Build 53) من داخل وخارج التطبيق مع تحسينات شاملة."
+        "تفعيل حماية خصوصية المحتوى ومنع تصوير الشاشة وتسجيل الفيديو في صفحة القراءة بنجاح.",
+        "تثبيت وضع ملء الشاشة والانغماس الكامل عند الانتقال للفصل التالي ومنع ظهور أشرطة النظام.",
+        "فتح التطبيق دائماً على الصفحة الرئيسية عند إعادة التشغيل مع استمرار حفظ ومزامنة سجل القراءة.",
+        "ربط إصدار صفحة التحديثات مركزياً بمصدر بيانات موحد مع إزالة زر التليجرام.",
+        "ترقية إصدار التطبيق رسمياً إلى 2.1.4 (Build 54) من داخل وخارج التطبيق مع تحسينات شاملة للأداء."
     )
 }

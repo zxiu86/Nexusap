@@ -164,7 +164,7 @@ enum class SettingsSubCategory(
     ),
     ABOUT_UPDATES(
         title = "حول التطبيق والتحديثات",
-        subtitle = "إصدار v2.0.7 SUPER، سجل التغييرات، وقناة التليجرام",
+        subtitle = "إصدار v${AppVersionConfig.VERSION_NAME} PRIME، وسجل التغييرات الشامل",
         icon = Icons.Default.Info,
         gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0288D1))
     )
@@ -3653,29 +3653,6 @@ private fun AboutUpdatesSubPage(
                             ),
                             modifier = Modifier.weight(1f)
                         )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF0288D1).copy(alpha = 0.1f),
-                    border = BorderStroke(0.8.dp, Color(0xFF0288D1).copy(alpha = 0.3f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/NexusManga"))
-                                context.startActivity(intent)
-                            } catch (_: Exception) {}
-                        }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = Color(0xFF0288D1), modifier = Modifier.size(18.dp))
-                        Text(text = "انضم لقناة التيليجرام الرسمية لأحدث الأخبار", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
                     }
                 }
 
