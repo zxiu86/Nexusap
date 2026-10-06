@@ -3,14 +3,18 @@ package com.example.util
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.util.Log
+import coil.Coil
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.data.model.Chapter
 import com.example.data.model.ChapterCoordinatesDto
 import com.example.data.model.NormalizedBoundingBox
 import com.example.data.model.PageWatermarkData
 import com.example.data.network.GitHubNetworkModule
 import com.example.data.repository.CoordinatesRepository
+import com.example.data.settings.AppSettingsManager
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -24,76 +28,98 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * High-Speed Precision Watermark Cleaner Engine (Native C++-Style Optimization)
+ * Ultra-Fast Precision Watermark Cleaning Engine
  *
- * Characteristics:
- * 1. Directly tied to the active user: Cleans only the opened chapter silently in the background.
- * 2. Smart Skip: If chapter is already cleaned (locally or on GitHub Coordinates repo), cleaner is NOT triggered.
- * 3. High Precision White Box Overlay: Tightly covers ONLY target keywords without clipping manga artwork.
- * 4. Target words: "موقع تيمكس", "تيم اكس", "تيمكس", "olympustaff.com", "https//:olympustaff.com", etc.
- * 5. GitHub Batch Protection: Coordinates are enqueued and uploaded in batches of 30 chapters per single commit.
+ * Capabilities:
+ * 1. Directly tied to the active user opening a chapter (silent background execution).
+ * 2. Instant memory & Coil cache reuse: Obtains software bitmaps directly without double-downloading.
+ * 3. Progressive Real-Time Application: Coordinates update page-by-page as they are scanned.
+ * 4. High-Precision White Layer: Targets strictly keywords and isolates matching element words.
+ * 5. Secret Background Counter: Tracks total cleaned watermarks for cosmic aura unlocking.
+ * 6. GitHub Batch Protection: Gathers 30 chapters before pushing 1 single commit.
  */
 object WatermarkCleanerBot {
 
-    private const val TAG = "PrecisionCleanerEngine"
+    private const val TAG = "PrecisionCleanerBot"
     private val botScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val processingMutex = Mutex()
     private val activeChapterCleaning = ConcurrentHashMap<String, Boolean>()
 
     val TARGET_KEYWORDS = listOf(
-        "موقع تيمكس",
-        "تيم اكس",
-        "تيمكس",
         "olympustaff.com",
         "https//:olympustaff.com",
         "https://olympustaff.com",
+        "http://olympustaff.com",
         "olympustaff",
         "olympus",
         "olympus-scans",
         "olympusscan",
         "olympus staff",
         "olympustaf",
+        "موقع تيمكس",
+        "تيم اكس",
+        "تيمكس",
+        "موقع",
+        "تيم",
+        "اكس",
         "teamx",
         "team-x",
         "timx",
-        "tim-x"
+        "tim-x",
+        "team x",
+        "teamxnovel",
+        "teamx.top",
+        "teamx.org",
+        "teamx.net"
     )
 
     /**
-     * Cleans the active chapter currently opened by the user.
-     * Runs completely in the background without disturbing the user or hitching the UI.
+     * Cleans the active chapter currently opened by the user in the background.
+     * Progressively calls onPageCleaned as each page finishes so the reader displays white overlays right away!
      */
     fun cleanChapterSilently(
         context: Context,
         seriesSlug: String,
         chapter: Chapter,
-        onCleaned: (ChapterCoordinatesDto) -> Unit = {}
+        onPageCleaned: (PageWatermarkData) -> Unit = {},
+        onAllFinished: (ChapterCoordinatesDto) -> Unit = {}
     ) {
         val chapterKey = "${seriesSlug}_${chapter.number}"
         if (activeChapterCleaning.putIfAbsent(chapterKey, true) == true) {
-            // Already actively cleaning this chapter
-            return
+            return // Already actively running for this chapter
         }
 
         botScope.launch {
             try {
                 val coordsRepo = CoordinatesRepository.getInstance(context)
 
-                // 1. Check if chapter is already cleaned
+                // 1. Check if chapter is already cleaned (Local cache or GitHub)
                 val existing = coordsRepo.getCoordinates(seriesSlug, chapter.number)
                 if (existing != null) {
-                    Log.d(TAG, "Chapter $chapterKey is already cleaned. Skipping cleaning engine.")
-                    withContext(Dispatchers.Main) { onCleaned(existing) }
+                    Log.d(TAG, "Chapter $chapterKey is already cleaned. Skipping cleaner.")
+                    withContext(Dispatchers.Main) {
+                        onAllFinished(existing)
+                    }
                     return@launch
                 }
 
-                // 2. Process chapter with precision high-speed engine
-                val cleanedDto = processChapterPrecision(context, coordsRepo, seriesSlug, chapter)
+                // 2. Run progressive precision cleaner
+                val cleanedDto = processChapterProgressive(
+                    context = context,
+                    coordsRepo = coordsRepo,
+                    seriesSlug = seriesSlug,
+                    chapter = chapter,
+                    onPageCleaned = onPageCleaned
+                )
+
                 if (cleanedDto != null) {
-                    withContext(Dispatchers.Main) { onCleaned(cleanedDto) }
+                    withContext(Dispatchers.Main) {
+                        onAllFinished(cleanedDto)
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Silent cleaning error for $chapterKey: ${e.message}")
@@ -103,22 +129,21 @@ object WatermarkCleanerBot {
         }
     }
 
-    /**
-     * Precision chapter cleaner with fast zero-alloc memory management.
-     */
-    private suspend fun processChapterPrecision(
+    private suspend fun processChapterProgressive(
         context: Context,
         coordsRepo: CoordinatesRepository,
         seriesSlug: String,
-        chapter: Chapter
+        chapter: Chapter,
+        onPageCleaned: (PageWatermarkData) -> Unit
     ): ChapterCoordinatesDto? = processingMutex.withLock {
         val pages = chapter.pages
         if (pages.isEmpty()) return null
 
-        Log.d(TAG, "Starting precision watermark cleaning for $seriesSlug chapter ${chapter.number} (${pages.size} pages)...")
+        Log.d(TAG, "Starting precision watermark cleaner on $seriesSlug chapter ${chapter.number} (${pages.size} pages)...")
 
         val pageResults = mutableListOf<PageWatermarkData>()
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        var totalDetectedBoxes = 0
 
         try {
             for ((index, page) in pages.withIndex()) {
@@ -126,24 +151,35 @@ object WatermarkCleanerBot {
                 val imageUrl = page.imageUrl
                 if (imageUrl.isNullOrBlank()) continue
 
-                val boxes = analyzeImageForWatermarks(imageUrl, recognizer)
+                val boxes = analyzeImageForWatermarks(context, imageUrl, recognizer)
                 if (boxes.isNotEmpty()) {
-                    pageResults.add(
-                        PageWatermarkData(
-                            pageNumber = pNum,
-                            boxes = boxes,
-                            originalText = "olympustaff.com / تيمكس",
-                            replacementText = "" // Pure clean white overlay
-                        )
+                    totalDetectedBoxes += boxes.size
+                    val pageData = PageWatermarkData(
+                        pageNumber = pNum,
+                        boxes = boxes,
+                        originalText = "olympustaff / teamx",
+                        replacementText = "" // Pure white layer
                     )
+                    pageResults.add(pageData)
+
+                    // 🎯 Immediately merge and notify progressive update
+                    coordsRepo.mergePageCoordinates(seriesSlug, chapter.number, pages.size, pageData)
+                    withContext(Dispatchers.Main) {
+                        onPageCleaned(pageData)
+                    }
                 }
-                // Gentle cooperative yield to guarantee smooth 120Hz reader scrolling
-                delay(30L)
+                // Gentle yield to keep 120Hz scrolling butter-smooth
+                delay(15L)
             }
         } finally {
             try {
                 recognizer.close()
             } catch (_: Exception) {}
+        }
+
+        // Secretly increment total cleaned counter for the cosmic aura threshold
+        if (totalDetectedBoxes > 0) {
+            AppSettingsManager.getInstance(context).incrementCleanedWatermarksCount(totalDetectedBoxes)
         }
 
         val dto = ChapterCoordinatesDto(
@@ -155,32 +191,32 @@ object WatermarkCleanerBot {
             updatedAt = System.currentTimeMillis()
         )
 
-        // 1. Immediately cache locally so this user and local readers see the white layer right away
+        // Save locally to cache immediately
         coordsRepo.saveToCache(dto)
 
-        // 2. Enqueue for batch commit to GitHub (zxiu86/Coordinates) every 30 chapters in 1 commit
+        // Enqueue to batch commit queue (commits every 30 chapters in 1 commit)
         if (dto.hasWatermarks()) {
             coordsRepo.enqueueCleanedChapter(dto)
         }
 
-        Log.d(TAG, "Finished cleaning chapter ${chapter.number} of $seriesSlug. Found watermarks on ${pageResults.size} pages.")
+        Log.d(TAG, "Finished cleaning chapter ${chapter.number} of $seriesSlug. Found watermarks on ${pageResults.size} pages ($totalDetectedBoxes total boxes).")
         return dto
     }
 
     /**
-     * Native-speed image analysis:
-     * - Decodes image directly into compact RGB_565 Bitmap with optimal sample size.
-     * - Runs ML Kit text recognition.
-     * - Tightly identifies watermark coordinates with word-level precision.
-     * - Immediately recycles Bitmap memory.
+     * Analyzes image with high accuracy:
+     * - Reuses Coil's downloaded bitmap or decodes locally with zero hardware lock.
+     * - Performs word-level element precision bounding box extraction.
+     * - Disposes and cleans memory immediately.
      */
     private suspend fun analyzeImageForWatermarks(
+        context: Context,
         imageUrl: String,
         recognizer: com.google.mlkit.vision.text.TextRecognizer
     ): List<NormalizedBoundingBox> = withContext(Dispatchers.IO) {
         var bitmap: Bitmap? = null
         try {
-            bitmap = downloadScaledBitmap(imageUrl, maxDimension = 1400)
+            bitmap = obtainPageBitmap(context, imageUrl)
             if (bitmap == null) return@withContext emptyList()
 
             val imgWidth = bitmap.width.toFloat()
@@ -194,33 +230,46 @@ object WatermarkCleanerBot {
 
             for (block in visionText.textBlocks) {
                 for (line in block.lines) {
-                    val lineText = line.text
-                    val lineNormalized = normalizeSearchString(lineText)
+                    val lineRaw = line.text
+                    val lineClean = normalizeSearchString(lineRaw)
 
-                    val isLineMatch = TARGET_KEYWORDS.any { kw ->
-                        val cleanKw = normalizeSearchString(kw)
-                        lineNormalized.contains(cleanKw) || (cleanKw.contains(lineNormalized) && lineNormalized.length >= 5)
-                    }
+                    val isLineMatch = isTextMatchingWatermark(lineRaw, lineClean)
 
                     if (isLineMatch) {
-                        // Word-level precision: check if specific element(s) contain the watermark
-                        val matchingElements = line.elements.filter { element ->
-                            val elemNorm = normalizeSearchString(element.text)
-                            TARGET_KEYWORDS.any { kw ->
-                                val cleanKw = normalizeSearchString(kw)
-                                elemNorm.contains(cleanKw) || cleanKw.contains(elemNorm)
-                            }
+                        // 1. If line is concise and dedicated to the watermark banner/URL/badge (<= 60 chars)
+                        val lineRect = line.boundingBox
+                        if (lineRaw.length <= 60 && lineRect != null) {
+                            val tightBox = normalizeAndPadRect(
+                                left = lineRect.left.toFloat(),
+                                top = lineRect.top.toFloat(),
+                                right = lineRect.right.toFloat(),
+                                bottom = lineRect.bottom.toFloat(),
+                                imgWidth = imgWidth,
+                                imgHeight = imgHeight
+                            )
+                            matchedBoxes.add(tightBox)
+                            continue
                         }
 
-                        if (matchingElements.isNotEmpty()) {
-                            // Compute ultra-tight bounding box strictly enclosing the matching words
+                        // 2. Otherwise for longer mixed lines: find span from first matching element to last matching element
+                        val elements = line.elements
+                        val matchingIndices = elements.mapIndexedNotNull { idx, el ->
+                            val elemRaw = el.text
+                            val elemClean = normalizeSearchString(elemRaw)
+                            if (isTextMatchingWatermark(elemRaw, elemClean)) idx else null
+                        }
+
+                        if (matchingIndices.isNotEmpty()) {
+                            val firstIdx = matchingIndices.first()
+                            val lastIdx = matchingIndices.last()
+
                             var minLeft = Float.MAX_VALUE
                             var minTop = Float.MAX_VALUE
                             var maxRight = Float.MIN_VALUE
                             var maxBottom = Float.MIN_VALUE
 
-                            for (el in matchingElements) {
-                                val r = el.boundingBox ?: continue
+                            for (i in firstIdx..lastIdx) {
+                                val r = elements[i].boundingBox ?: continue
                                 if (r.left < minLeft) minLeft = r.left.toFloat()
                                 if (r.top < minTop) minTop = r.top.toFloat()
                                 if (r.right > maxRight) maxRight = r.right.toFloat()
@@ -241,7 +290,7 @@ object WatermarkCleanerBot {
                             }
                         }
 
-                        // Fallback to line box with tight padding
+                        // Fallback to line bounding box
                         val rect = line.boundingBox ?: block.boundingBox
                         if (rect != null) {
                             val tightBox = normalizeAndPadRect(
@@ -267,22 +316,62 @@ object WatermarkCleanerBot {
         }
     }
 
+    private fun isTextMatchingWatermark(rawText: String, cleanText: String): Boolean {
+        val normAr = normalizeArabic(rawText).lowercase()
+
+        // 1. Direct Arabic checks with normalization
+        if (normAr.contains("تيمكس") || normAr.contains("تيم اكس") || normAr.contains("موقع تيمكس") || normAr.contains("موقع تيم اكس")) {
+            return true
+        }
+        if (normAr.contains("تيم") && normAr.contains("اكس")) {
+            return true
+        }
+
+        // 2. Keyword normalization checks
+        for (kw in TARGET_KEYWORDS) {
+            val kwClean = normalizeSearchString(kw)
+            if (cleanText.contains(kwClean)) return true
+            if (kwClean.contains(cleanText) && cleanText.length >= 4) return true
+        }
+
+        // 3. Brand specifics & fuzzy handles for stylized fonts
+        if (cleanText.contains("olympustaff") || cleanText.contains("olympus") || cleanText.contains("olympusta") ||
+            cleanText.contains("olympust") || cleanText.contains("lympustaff") || cleanText.contains("staffcom")
+        ) {
+            return true
+        }
+        if (cleanText.contains("teamx") || cleanText.contains("timx") || cleanText.contains("teanx") ||
+            cleanText.contains("team-x") || cleanText.contains("teamxnovel")
+        ) {
+            return true
+        }
+
+        return false
+    }
+
+    private fun normalizeArabic(input: String): String {
+        return input
+            .replace(Regex("[\\u064B-\\u065F\\u0670]"), "") // remove tashkeel
+            .replace('أ', 'ا')
+            .replace('إ', 'ا')
+            .replace('آ', 'ا')
+            .replace('ة', 'ه')
+            .replace('ى', 'ي')
+    }
+
     private fun normalizeSearchString(input: String): String {
-        return input.lowercase()
+        return normalizeArabic(input).lowercase()
             .replace(" ", "")
             .replace("-", "")
             .replace("_", "")
             .replace("/", "")
+            .replace("\\", "")
             .replace(":", "")
             .replace(".", "")
             .replace("https", "")
             .replace("http", "")
     }
 
-    /**
-     * Ultra-precise normalized bounding box:
-     * Tightly pads by only 2-3% (2-4px max) to prevent deleting any manga drawing or dialogue.
-     */
     private fun normalizeAndPadRect(
         left: Float,
         top: Float,
@@ -316,8 +405,54 @@ object WatermarkCleanerBot {
     }
 
     /**
-     * Efficient bitmap decode with zero memory overhead using RGB_565
+     * Obtains a software Bitmap with zero double-downloading:
+     * 1. Reuses Coil memory / disk cache if already loaded or loading.
+     * 2. Checks local filesystem if offline file.
+     * 3. Fallbacks to direct scaled HTTP decode if needed.
      */
+    private suspend fun obtainPageBitmap(context: Context, imageUrl: String): Bitmap? = withContext(Dispatchers.IO) {
+        if (imageUrl.isBlank()) return@withContext null
+
+        // Method 1: Local file check
+        if (imageUrl.startsWith("/") || imageUrl.startsWith("file:")) {
+            try {
+                val path = imageUrl.removePrefix("file://")
+                val file = File(path)
+                if (file.exists() && file.length() > 0) {
+                    val options = BitmapFactory.Options().apply {
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                        inSampleSize = 2
+                    }
+                    val bmp = BitmapFactory.decodeFile(file.absolutePath, options)
+                    if (bmp != null) return@withContext bmp
+                }
+            } catch (_: Exception) {}
+        }
+
+        // Method 2: Coil Cache / Loader
+        try {
+            val loader = Coil.imageLoader(context)
+            val request = ImageRequest.Builder(context)
+                .data(imageUrl)
+                .allowHardware(false) // Must be Software Bitmap for ML Kit
+                .size(1200, 1800)
+                .build()
+
+            val result = loader.execute(request)
+            if (result is SuccessResult) {
+                val drawable = result.drawable
+                if (drawable is BitmapDrawable && drawable.bitmap != null) {
+                    return@withContext drawable.bitmap.copy(Bitmap.Config.RGB_565, false)
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Coil decode fallback for $imageUrl: ${e.message}")
+        }
+
+        // Method 3: Fallback direct network decode
+        downloadScaledBitmap(imageUrl, maxDimension = 1200)
+    }
+
     private fun downloadScaledBitmap(imageUrl: String, maxDimension: Int): Bitmap? {
         return try {
             val request = Request.Builder()
@@ -353,7 +488,7 @@ object WatermarkCleanerBot {
 
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
         } catch (e: Exception) {
-            Log.w(TAG, "Bitmap download decode error: ${e.message}")
+            Log.w(TAG, "Direct download decode error: ${e.message}")
             null
         }
     }

@@ -95,8 +95,9 @@ data class ChapterCoordinatesDto(
     @Json(name = "version") val version: Int = 1,
     @Json(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 ) {
-    fun getPageData(pageNumber: Int): PageWatermarkData? {
-        return pages.find { it.pageNumber == pageNumber }
+    fun getPageData(pageNumber: Int, fallbackIndex: Int = -1): PageWatermarkData? {
+        val targetPage = if (pageNumber > 0) pageNumber else (fallbackIndex + 1)
+        return pages.find { it.pageNumber == targetPage }
     }
 
     fun hasWatermarks(): Boolean {

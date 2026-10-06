@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "description": "تطبيق Nexus الإصدار 2.1.5 مع نظام تنظيف تلقائي فائق مرتبط بالفصل المفتوح، تنظيف دقيق بطبقة بيضاء لكلمات تيمكس و olympustaff، مزامنة zxiu86/Coordinates، ورفع مجمع كل 30 فصلاً في كوميت واحد",
+  "description": "تطبيق Nexus الإصدار 1.2.6 مع نظام التنظيف التلقائي الذكي للإحداثيات، قائمة تحكم زجاج سائل لنمط تحميل الصفحات (تنزيل طوابير / تجهيز الكل)، ودعم مظهر الفضاء الكوني",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

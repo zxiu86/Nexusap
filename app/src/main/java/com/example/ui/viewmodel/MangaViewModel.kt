@@ -82,13 +82,14 @@ data class HomeUiState(
     val isTestingGitHub: Boolean = false,
     val gitHubTestResult: com.example.data.network.GitHubConnectionTestResult? = null,
     val gitHubSyncStatus: String? = null,
-    val readChaptersMap: Map<String, Set<Int>> = emptyMap()
+    val readChaptersMap: Map<String, Set<Int>> = emptyMap(),
+    val cleanedWatermarksCount: Int = 0
 ) {
     val totalReadChaptersCount: Int
         get() = readChaptersMap.values.sumOf { it.size }
 
     val isCosmicAuraUnlocked: Boolean
-        get() = totalReadChaptersCount >= 500 || (currentUser?.isAdmin == true)
+        get() = totalReadChaptersCount >= 500 || cleanedWatermarksCount >= 500 || (currentUser?.isAdmin == true)
 
     val totalPages: Int
         get() = if (latestMangaGrid.isEmpty()) 1 else (latestMangaGrid.size + itemsPerPage - 1) / itemsPerPage
@@ -509,7 +510,8 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             isTestingGitHub = authState.isTestingGitHub,
             gitHubTestResult = authState.gitHubTestResult,
             gitHubSyncStatus = authState.gitHubSyncStatus,
-            readChaptersMap = offlineData.readChaptersMap
+            readChaptersMap = offlineData.readChaptersMap,
+            cleanedWatermarksCount = settingsManager.getCleanedWatermarksCount()
         )
     }.stateIn(
         viewModelScope,
@@ -957,29 +959,40 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val coordsRepo = com.example.data.repository.CoordinatesRepository.getInstance(getApplication())
-            val existingCoords = coordsRepo.getCoordinates(mangaId, chapterNumber)
+            // Fast cache check (0ms) so pages and local cleanings render immediately
+            val cachedCoords = coordsRepo.getCoordinatesFromCache(mangaId, chapterNumber)
 
             val fullChapter = repository.getChapterWithPages(mangaId, chapterNumber, forceFresh = forceFresh)
             _readerUiState.value = _readerUiState.value.copy(
                 currentChapter = fullChapter,
-                coordinates = existingCoords,
+                coordinates = cachedCoords,
                 isLoadingPages = false,
                 isDownloaded = repository.isChapterDownloaded(mangaId, chapterNumber)
             )
 
             // 🎯 Automated Background Cleaning Mechanism:
-            // إذا كان الفصل منظفاً من قبل (موجود محلياً أو في مستودع zxiu86/Coordinates): لا يتم تفعيل آلية التنظيف!
-            // إذا كان غير منظف: يتم تشغيل آلية التنظيف الفائقة في الخلفية مباشرة بدون أي إزعاج للمستخدم.
-            if (existingCoords == null && fullChapter != null && fullChapter.pages.isNotEmpty()) {
+            // فحص فوري: إذا كان الفصل غير منظف مسبقاً، تنطلق الآلية في الخلفية وتُحدّث الإحداثيات صفحة بصفحة لحظياً
+            val existingCoords = cachedCoords ?: coordsRepo.getCoordinates(mangaId, chapterNumber)
+            if (existingCoords != null) {
+                _readerUiState.value = _readerUiState.value.copy(coordinates = existingCoords)
+            } else if (fullChapter != null && fullChapter.pages.isNotEmpty()) {
                 com.example.util.WatermarkCleanerBot.cleanChapterSilently(
                     context = getApplication(),
                     seriesSlug = mangaId,
                     chapter = fullChapter,
-                    onCleaned = { computed ->
+                    onPageCleaned = { pageData ->
                         if (_readerUiState.value.currentChapter?.number == chapterNumber &&
                             _readerUiState.value.manga?.id == mangaId
                         ) {
-                            _readerUiState.value = _readerUiState.value.copy(coordinates = computed)
+                            val merged = coordsRepo.mergePageCoordinates(mangaId, chapterNumber, fullChapter.pages.size, pageData)
+                            _readerUiState.value = _readerUiState.value.copy(coordinates = merged)
+                        }
+                    },
+                    onAllFinished = { finalDto ->
+                        if (_readerUiState.value.currentChapter?.number == chapterNumber &&
+                            _readerUiState.value.manga?.id == mangaId
+                        ) {
+                            _readerUiState.value = _readerUiState.value.copy(coordinates = finalDto)
                         }
                     }
                 )
@@ -987,6 +1000,10 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
             // Note: Chapter is marked as read and registered to history only after 6 seconds of reading
         }
+    }
+
+    fun updateReaderPreloadAll(preload: Boolean) {
+        settingsManager.updateReaderPreloadAll(preload)
     }
 
     /**

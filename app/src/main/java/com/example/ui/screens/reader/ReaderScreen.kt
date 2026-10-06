@@ -8,6 +8,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -15,6 +18,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -57,6 +61,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -157,6 +165,7 @@ fun ReaderScreen(
     onSetQuickJumpOpen: (Boolean) -> Unit,
     onRecordPageProgress: (page: Int, total: Int) -> Unit = { _, _ -> },
     onChapterReadingThresholdReached: (mangaId: String, chapterNumber: Int) -> Unit = { _, _ -> },
+    onUpdateReaderPreloadAll: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -167,6 +176,8 @@ fun ReaderScreen(
     val listState = rememberLazyListState()
 
     var showControls by remember { mutableStateOf(false) }
+    var showLoadingModeSheet by remember { mutableStateOf(false) }
+    val preloadAll = uiState.appSettings.readerPreloadAll
 
     // ⏱️ Silent 6-Second Background Reading Timer (مؤقت قراءة صامت في الخلفية):
     // القراءة للفصل لا تحتسب إلا بعد البقاء لمدة 6 ثوانٍ بدون إزعاج للمستخدمين
@@ -457,8 +468,8 @@ fun ReaderScreen(
                         key = { index, page -> "${chapter.number}-${page.pageNumber}-$index" }
                     ) { index, page ->
                         val pNum = page.pageNumber.takeIf { it > 0 } ?: (index + 1)
-                        val pageWatermark = uiState.coordinates?.getPageData(pNum)
-                        val shouldLoad = index <= maxAllowedLoadIndex
+                        val pageWatermark = uiState.coordinates?.getPageData(pNum, index)
+                        val shouldLoad = if (preloadAll) true else (index <= maxAllowedLoadIndex)
                         ComicPageItem(
                             imageUrl = page.imageUrl,
                             pageRes = page.imageRes,
@@ -555,24 +566,48 @@ fun ReaderScreen(
             )
         }
 
-        // Bottom Floating Navigation Bar (Previous, Quick Jump List, Next)
+        // Bottom Floating Navigation Bar (Previous, Quick Jump List, Next) + Liquid Glass Loading Mode Capsule
         AnimatedVisibility(
             visible = showControls,
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            ReaderBottomBar(
-                currentChapterNumber = chapter.number,
-                totalChapters = manga.totalChaptersCount,
-                hasPrevious = uiState.hasPreviousChapter,
-                hasNext = uiState.hasNextChapter,
-                glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
-                onPreviousChapter = onPreviousChapter,
-                onNextChapter = handleNextChapter,
-                onOpenQuickJump = { onSetQuickJumpOpen(true) },
-                currentPage = currentVisiblePage,
-                totalPages = totalPages
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // 📱 iPhone-style Liquid Glass Loading Mode Trigger Capsule (زر منزلق فوق الفوتر)
+                LiquidGlassLoadingModeCapsule(
+                    totalPages = totalPages,
+                    preloadAll = preloadAll,
+                    onClick = { showLoadingModeSheet = true }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                ReaderBottomBar(
+                    currentChapterNumber = chapter.number,
+                    totalChapters = manga.totalChaptersCount,
+                    hasPrevious = uiState.hasPreviousChapter,
+                    hasNext = uiState.hasNextChapter,
+                    glassmorphismEnabled = uiState.appSettings.glassmorphismEnabled,
+                    onPreviousChapter = onPreviousChapter,
+                    onNextChapter = handleNextChapter,
+                    onOpenQuickJump = { onSetQuickJumpOpen(true) },
+                    currentPage = currentVisiblePage,
+                    totalPages = totalPages
+                )
+            }
+        }
+
+        // 📱 Liquid Glass Loading Mode Sliding Sheet (القائمة المنزلقة بنمط زجاج سائل مثل الآيفون)
+        if (showLoadingModeSheet) {
+            LiquidGlassLoadingModeSheet(
+                totalPages = totalPages,
+                preloadAll = preloadAll,
+                onTogglePreloadAll = { newPreload ->
+                    onUpdateReaderPreloadAll(newPreload)
+                },
+                onDismiss = { showLoadingModeSheet = false }
             )
         }
 
@@ -1586,6 +1621,367 @@ fun QuickJumpBottomSheet(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 📱 iPhone-style Liquid Glass Loading Mode Trigger Capsule
+ * Floating pill above the reader bottom bar.
+ */
+@Composable
+fun LiquidGlassLoadingModeCapsule(
+    totalPages: Int,
+    preloadAll: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFF0F172A).copy(alpha = 0.75f),
+        border = BorderStroke(
+            1.2.dp,
+            Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.65f),
+                    Color(0xFF38BDF8).copy(alpha = 0.45f),
+                    Color.White.copy(alpha = 0.2f)
+                )
+            )
+        ),
+        shadowElevation = 8.dp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .clickable { onClick() }
+            .testTag("reader_loading_mode_trigger_btn")
+    ) {
+        Row(
+            modifier = Modifier
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.08f),
+                            Color(0xFF38BDF8).copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Tune,
+                contentDescription = null,
+                tint = if (preloadAll) Color(0xFF38BDF8) else Color(0xFFF59E0B),
+                modifier = Modifier.size(16.dp)
+            )
+
+            Text(
+                text = if (preloadAll) "نمط التحميل: تجهيز الكل ⚡" else "نمط التحميل: تنزيل طوابير ⏳",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 11.sp
+                )
+            )
+
+            Surface(
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.15f),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f))
+            ) {
+                Text(
+                    text = "$totalPages ص",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 📱 iPhone-style Liquid Glass Loading Mode Sliding Sheet
+ * Displays chapter pages count and interactive liquid glass sliding segmented switch (زر سحب يمين ويسار).
+ */
+@Composable
+fun LiquidGlassLoadingModeSheet(
+    totalPages: Int,
+    preloadAll: Boolean,
+    onTogglePreloadAll: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() }
+            .testTag("liquid_glass_loading_sheet_overlay"),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 18.dp)
+                .clickable(enabled = false) {}
+                .testTag("liquid_glass_loading_sheet"),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = BorderStroke(
+                1.5.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.7f),
+                        Color(0xFF38BDF8).copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.2f)
+                    )
+                )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF1E293B).copy(alpha = 0.94f),
+                                Color(0xFF0F172A).copy(alpha = 0.98f)
+                            )
+                        )
+                    )
+                    .padding(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // iOS Grabber Pill
+                    Box(
+                        modifier = Modifier
+                            .width(42.dp)
+                            .height(4.5.dp)
+                            .background(Color.White.copy(alpha = 0.45f), RoundedCornerShape(3.dp))
+                    )
+
+                    // Header Row: Title & Total Pages Pill
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF38BDF8).copy(alpha = 0.2f),
+                                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Tune,
+                                        contentDescription = null,
+                                        tint = Color(0xFF38BDF8),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "إعدادات تحميل الفصل",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            )
+                        }
+
+                        // Total Pages Badge
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color.White.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f))
+                        ) {
+                            Text(
+                                text = "عدد صفحات الفصل: $totalPages صفحة",
+                                color = Color(0xFFF1F5F9),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+
+                    // 📱 Liquid Glass Interactive Slider (زر سحب يمين ويسار بتصميم زجاج سائل أسطوري مثل آيفون)
+                    val sliderAlignment by animateFloatAsState(
+                        targetValue = if (preloadAll) -1f else 1f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "slider_alignment"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.45f))
+                            .border(
+                                1.dp,
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.4f),
+                                        Color(0xFF38BDF8).copy(alpha = 0.3f),
+                                        Color.White.copy(alpha = 0.2f)
+                                    )
+                                ),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .padding(4.dp)
+                    ) {
+                        // Animated Glass Thumb Pill (مؤشر الزجاج السائل المنزلق)
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            val pillWidth = maxWidth / 2
+                            val offsetX = if (preloadAll) 0.dp else pillWidth
+
+                            Box(
+                                modifier = Modifier
+                                    .width(pillWidth)
+                                    .fillMaxHeight()
+                                    .offset(x = offsetX)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        if (preloadAll) {
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color(0xFF0284C7).copy(alpha = 0.85f),
+                                                    Color(0xFF0369A1).copy(alpha = 0.95f)
+                                                )
+                                            )
+                                        } else {
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color(0xFFD97706).copy(alpha = 0.85f),
+                                                    Color(0xFFB45309).copy(alpha = 0.95f)
+                                                )
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        1.dp,
+                                        Color.White.copy(alpha = 0.6f),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                        }
+
+                        // Labels & Click Targets
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // "تجهيز الكل" Segment (Preload All)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { onTogglePreloadAll(true) },
+                                    contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = if (preloadAll) Color.White else Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "تجهيز الكل",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (preloadAll) Color.White else Color.White.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
+
+                            // "تنزيل طوابير" Segment (Queue Loading)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { onTogglePreloadAll(false) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FormatListNumbered,
+                                        contentDescription = null,
+                                        tint = if (!preloadAll) Color.White else Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "تنزيل طوابير",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (!preloadAll) Color.White else Color.White.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Mode Description Glass Card
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White.copy(alpha = 0.06f),
+                        border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.2f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (preloadAll) {
+                                "⚡ تجهيز الكل (نشط): يتم فك طوابير التحميل وتجهيز جميع صفحات الفصل مسبقاً لتصفح لحظي فائق السرعة وبدون أي انتظار."
+                            } else {
+                                "🛡️ تنزيل طوابير (نشط): يتم تحميل الصفحات بالتسلسل صورة تلو الأخرى لتوفير باقة الإنترنت وتجنب استهلاك الذاكرة."
+                            },
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 11.5.sp,
+                            lineHeight = 16.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+
+                    // Done / Dismiss Button
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White.copy(alpha = 0.15f),
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = "تم وحفظ النمط",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }

@@ -21,6 +21,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withTimeoutOrNull
+import com.example.data.model.PageWatermarkData
 
 data class PendingChapterUpload(
     val seriesSlug: String,
@@ -88,16 +90,12 @@ class CoordinatesRepository(private val context: Context) {
     }
 
     /**
-     * Retrieves coordinates for a specific chapter:
-     * 1. Memory cache
-     * 2. Disk cache
-     * 3. Remote GitHub repository (https://github.com/zxiu86/Coordinates)
+     * Instant 0ms cache check (Memory or Disk) without any network latency
      */
-    suspend fun getCoordinates(seriesSlug: String, chapterNumber: Int): ChapterCoordinatesDto? = withContext(Dispatchers.IO) {
+    fun getCoordinatesFromCache(seriesSlug: String, chapterNumber: Int): ChapterCoordinatesDto? {
         val cacheKey = getCacheKey(seriesSlug, chapterNumber)
-        memoryCache[cacheKey]?.let { return@withContext it }
+        memoryCache[cacheKey]?.let { return it }
 
-        // 1. Check Disk Cache
         val diskFile = File(diskCacheDir, "coords_${seriesSlug}_${chapterNumber}.json")
         if (diskFile.exists() && diskFile.length() > 0) {
             try {
@@ -105,15 +103,29 @@ class CoordinatesRepository(private val context: Context) {
                 val parsed = ChapterCoordinatesDto.fromJsonString(json)
                 if (parsed != null) {
                     memoryCache[cacheKey] = parsed
-                    return@withContext parsed
+                    return parsed
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed reading disk coords: ${e.message}")
             }
         }
+        return null
+    }
 
-        // 2. Check Remote GitHub Repository (zxiu86/Coordinates)
-        val remote = fetchFromGitHub(seriesSlug, chapterNumber)
+    /**
+     * Retrieves coordinates for a specific chapter:
+     * 1. Memory cache (Instant)
+     * 2. Disk cache (Instant)
+     * 3. Remote GitHub repository (https://github.com/zxiu86/Coordinates) with quick timeout
+     */
+    suspend fun getCoordinates(seriesSlug: String, chapterNumber: Int): ChapterCoordinatesDto? = withContext(Dispatchers.IO) {
+        // Fast path: memory or disk cache
+        getCoordinatesFromCache(seriesSlug, chapterNumber)?.let { return@withContext it }
+
+        // 2. Check Remote GitHub Repository (zxiu86/Coordinates) with 2-second timeout
+        val remote = withTimeoutOrNull(2000L) {
+            fetchFromGitHub(seriesSlug, chapterNumber)
+        }
         if (remote != null) {
             saveToCache(remote)
             return@withContext remote
@@ -129,7 +141,7 @@ class CoordinatesRepository(private val context: Context) {
      * - {seriesSlug}/{chapterNumber}.json
      * - coordinates/{seriesSlug}/{chapterNumber}.json
      */
-    private fun fetchFromGitHub(seriesSlug: String, chapterNumber: Int): ChapterCoordinatesDto? {
+    private suspend fun fetchFromGitHub(seriesSlug: String, chapterNumber: Int): ChapterCoordinatesDto? = withContext(Dispatchers.IO) {
         val owner = COORDINATES_OWNER
         val repo = COORDINATES_REPO
         val branch = COORDINATES_BRANCH
@@ -146,28 +158,63 @@ class CoordinatesRepository(private val context: Context) {
             val rawContent = GitHubNetworkModule.fetchDirectRaw(rawUrl, forceFresh = false)
             if (!rawContent.isNullOrBlank()) {
                 val dto = ChapterCoordinatesDto.fromJsonString(rawContent)
-                if (dto != null) return dto
+                if (dto != null) return@withContext dto
             }
 
             // Mirror 2: GitHub API Content
             try {
-                val response = kotlinx.coroutines.runBlocking {
-                    GitHubNetworkModule.apiService.getContentRaw(
-                        owner = owner,
-                        repo = repo,
-                        path = path,
-                        branch = branch
-                    )
-                }
+                val response = GitHubNetworkModule.apiService.getContentRaw(
+                    owner = owner,
+                    repo = repo,
+                    path = path,
+                    branch = branch
+                )
                 if (response.isSuccessful && response.body() != null) {
                     val bodyStr = response.body()!!.string()
                     val dto = ChapterCoordinatesDto.fromJsonString(bodyStr)
-                    if (dto != null) return dto
+                    if (dto != null) return@withContext dto
                 }
             } catch (_: Exception) {}
         }
 
-        return null
+        null
+    }
+
+    /**
+     * Progressively merges a single page's coordinates as soon as it is cleaned
+     */
+    fun mergePageCoordinates(
+        seriesSlug: String,
+        chapterNumber: Int,
+        totalPages: Int,
+        pageData: PageWatermarkData
+    ): ChapterCoordinatesDto {
+        val cacheKey = getCacheKey(seriesSlug, chapterNumber)
+        val existing = memoryCache[cacheKey]
+        val updatedPages = if (existing != null) {
+            val list = existing.pages.toMutableList()
+            val idx = list.indexOfFirst { it.pageNumber == pageData.pageNumber }
+            if (idx >= 0) {
+                list[idx] = pageData
+            } else {
+                list.add(pageData)
+            }
+            list
+        } else {
+            listOf(pageData)
+        }
+
+        val dto = (existing ?: ChapterCoordinatesDto(
+            seriesSlug = seriesSlug,
+            chapterNumber = chapterNumber,
+            totalPages = totalPages,
+            pages = updatedPages,
+            version = 1,
+            updatedAt = System.currentTimeMillis()
+        )).copy(pages = updatedPages, totalPages = totalPages.coerceAtLeast(updatedPages.size))
+
+        saveToCache(dto)
+        return dto
     }
 
     /**
