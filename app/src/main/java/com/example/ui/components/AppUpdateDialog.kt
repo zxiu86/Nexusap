@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -334,7 +336,70 @@ fun AppUpdateDialog(
                         Text("حسناً، فهمت", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 👻 Created by CODER (Snapchat Profile Launcher)
+                CreatedByCoderBadge(accentPrimary = accentPrimary)
             }
+        }
+    }
+}
+
+/**
+ * Clean & Minimal Plain Text Signature: "Create by CODER"
+ * Pure text without any container card or heavy background box.
+ * The name "CODER" is styled with the active theme's primary accent color.
+ * Clicking directly launches the Snapchat profile via Snapchat app or browser.
+ */
+@Composable
+fun CreatedByCoderBadge(
+    modifier: Modifier = Modifier,
+    accentPrimary: Color = MaterialTheme.colorScheme.primary
+) {
+    val context = LocalContext.current
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable {
+                    AppVersionConfig.openSnapchatProfile(context)
+                }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .testTag("create_by_coder_button"),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Create by ",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.5.sp
+                )
+            )
+            Text(
+                text = AppVersionConfig.CODER_NAME,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = accentPrimary,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 13.5.sp
+                )
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "↗",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = accentPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            )
         }
     }
 }

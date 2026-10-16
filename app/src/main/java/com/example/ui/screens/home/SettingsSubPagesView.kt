@@ -115,6 +115,7 @@ import com.example.ui.theme.NexusOrange
 import com.example.ui.theme.ThemePalettes
 import com.example.ui.theme.GlassmorphicStyle.glassmorphicCard
 import com.example.ui.viewmodel.HomeUiState
+import com.example.ui.components.CreatedByCoderBadge
 import com.example.util.AppVersionConfig
 
 /**
@@ -3664,6 +3665,11 @@ private fun AboutUpdatesSubPage(
                     ),
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 👻 Created by CODER (Snapchat Profile Launcher)
+                CreatedByCoderBadge(accentPrimary = accentPrimary)
             }
         }
     }

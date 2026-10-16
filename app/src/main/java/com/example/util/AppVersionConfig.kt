@@ -1,5 +1,9 @@
 package com.example.util
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+
 /**
  * Central Single Source of Truth for Application Versioning & Metadata.
  * Whenever a new release is prepared, updating values in this file updates all UI
@@ -7,20 +11,46 @@ package com.example.util
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.6"
-    const val VERSION_CODE = 56
-    const val BUILD_CODENAME = "Nexus Glassmorphism PRIME"
+    const val VERSION_NAME = "2.1.7"
+    const val VERSION_CODE = 57
+    const val BUILD_CODENAME = "Nexus Stellar Cosmic PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "أكتوبر 2026"
     const val AUTHOR_CREDITS = "فريق Nexus"
+    const val CODER_NAME = "CODER"
+    const val CODER_SNAPCHAT_URL = "https://www.snapchat.com/add/zaid09_90?share_id=SVpvc9niKBU&locale=ar-AE"
+    const val CODER_SNAPCHAT_URI = "snapchat://add/zaid09_90"
 
     /**
-     * Short version string: "v1.2.6 PRIME"
+     * Safely open the CODER Snapchat profile, launching the Snapchat app if available
+     * or falling back gracefully to the web browser profile link.
+     */
+    fun openSnapchatProfile(context: Context) {
+        try {
+            val appIntent = Intent(Intent.ACTION_VIEW, Uri.parse(CODER_SNAPCHAT_URI)).apply {
+                setPackage("com.snapchat.android")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(appIntent)
+        } catch (_: Exception) {
+            try {
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(CODER_SNAPCHAT_URL)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(browserIntent)
+            } catch (_: Exception) {
+                // Graceful fallback ignore
+            }
+        }
+    }
+
+    /**
+     * Short version string: "v2.1.7 PRIME"
      */
     fun getFullVersionString(): String = "v$VERSION_NAME PRIME"
 
     /**
-     * Build identifier: "Build 56"
+     * Build identifier: "Build 57"
      */
     fun getFormattedVersionCode(): String = "Build $VERSION_CODE"
 
@@ -36,7 +66,7 @@ object AppVersionConfig {
 
     /**
      * Full footer/copyright string in settings:
-     * "الإصدار الرسمي v1.2.6 PRIME (Build 56) • فريق Nexus"
+     * "الإصدار الرسمي v2.1.7 PRIME (Build 57) • فريق Nexus"
      */
     fun getSettingsFullDetails(): String =
         "الإصدار الرسمي v$VERSION_NAME PRIME (Build $VERSION_CODE) • $AUTHOR_CREDITS"
@@ -55,10 +85,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "تقوية وإصلاح محرك التنظيف التلقائي الذكي ليعمل لحظياً عبر ذاكرة Coil والمسارات المحلية فوراً.",
+        "تأثير فضاء عميق واقعي ومبهر جداً لبطاقة الغلاف الدوارة في صفحة التفاصيل مع شهب ثلاثية الأبعاد ونجوم متلألئة.",
+        "إضافة توقيع تفاعلي Created by CODER في صفحة التحديثات وبنهاية الإعدادات ينقلك مباشرة لحساب سناب شات.",
+        "ترقية شاملة لإصدار التطبيق رسمياً إلى v2.1.7 PRIME داخلياً وخارجياً مع أداء سلس وخارق.",
         "قائمة منزلقة بتصميم زجاج سائل (Liquid Glass) على غرار آيفون للتبديل بين تنزيل طوابير وتجهيز الكل.",
-        "تحسين دقة وسرعة وضع الطبقة البيضاء على كلمات تيمكس، تيم اكس، olympustaff.com، وhttps//:olympustaff.com.",
-        "تحديث العداد الخلفي السري وتفعيل نظام المكافأة عند الوصول لـ 500 في الخلفية.",
-        "ترقية إصدار التطبيق رسمياً إلى 1.2.6 (Build 56) من داخل وخارج التطبيق."
+        "تقوية وإصلاح محرك التنظيف التلقائي للشعارات والعلامات المائية ليعمل بأقصى دقة وسرعة."
     )
 }

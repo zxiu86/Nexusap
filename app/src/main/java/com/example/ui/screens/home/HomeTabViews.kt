@@ -170,6 +170,7 @@ import com.example.data.model.MangaItem
 import com.example.data.model.MangaType
 import com.example.data.model.ReadingHistoryEntry
 import com.example.ui.components.NexusMangaImage
+import com.example.ui.components.CreatedByCoderBadge
 import com.example.ui.theme.HarmattanFontFamily
 import com.example.ui.theme.ThemePalettes
 import com.example.ui.theme.GlassmorphicStyle.glassmorphicFooter
@@ -5011,6 +5012,9 @@ fun SettingsTabContent(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
+
+                    // 👻 Created by CODER (Snapchat Profile Launcher)
+                    CreatedByCoderBadge(accentPrimary = accentPrimary)
                 }
             }
         }

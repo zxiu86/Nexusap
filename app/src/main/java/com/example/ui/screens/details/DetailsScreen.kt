@@ -56,6 +56,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.input.ImeAction
@@ -102,9 +108,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -576,6 +584,288 @@ fun DetailsTopAppBar(
 }
 
 /**
+ * Star Classification for Calm Realistic Cosmic Rendering (Same as CosmicSpaceFooterAura)
+ */
+private enum class CosmicHeaderStarKind {
+    BRILLIANT_FLARE,
+    CELESTIAL_SPARK,
+    DISTANT_STARDUST
+}
+
+private class RealisticHeaderCosmicStar(
+    var x: Float,
+    var y: Float,
+    val vx: Float,
+    val vy: Float,
+    val baseRadius: Float,
+    val chromaticTint: Color,
+    val kind: CosmicHeaderStarKind,
+    val twinkleSpeed: Float,
+    val phase: Float,
+    val flareSpan: Float = 0f
+)
+
+/**
+ * 🌌 Calm Cosmic Space Stars Aura for Details Header (نفس تصميم نجوم فوتر الفضاء الهادئ تماماً)
+ * Draws delicate, realistic multi-depth stars with soft optical spikes and stardust
+ * behind the cover card and header content, without altering or resizing the card layout.
+ */
+@Composable
+fun CosmicHeaderStarsAura(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "header_cosmic_stars_transition")
+
+    // Slow organic celestial drift phase
+    val celestialDriftPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * Math.PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 28000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "header_cosmic_drift_phase"
+    )
+
+    // Periodic gentle Shooting Star / Meteor loop (every 16 seconds)
+    val meteorProgress by infiniteTransition.animateFloat(
+        initialValue = -0.4f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 16000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "header_cosmic_meteor_progress"
+    )
+
+    // Generate balanced, realistic multi-depth starfield with deterministic organic seed (same spectral palette as CosmicSpaceFooterAura)
+    val stars = remember {
+        val rand = Random(998877)
+        val spectralPalette = listOf(
+            Color(0xFFFFFFFF), // Pure Brilliant White
+            Color(0xFFE0F7FA), // Diamond Ice Cyan
+            Color(0xFFFFF9C4), // Starlight Gold
+            Color(0xFFE1BEE7), // Ethereal Violet Nebula
+            Color(0xFF80D8FF), // Vivid Sapphire Spark
+            Color(0xFFFFD180), // Warm Amber Twilight
+            Color(0xFFB3E5FC)  // Soft Celestial Azure
+        )
+
+        val starList = mutableListOf<RealisticHeaderCosmicStar>()
+
+        // 1. Brilliant Foreground Stars with Diffraction Spikes (4 stars)
+        repeat(4) { i ->
+            starList.add(
+                RealisticHeaderCosmicStar(
+                    x = 0.08f + rand.nextFloat() * 0.84f,
+                    y = 0.08f + rand.nextFloat() * 0.84f,
+                    vx = (rand.nextFloat() - 0.5f) * 0.00008f,
+                    vy = (rand.nextFloat() - 0.5f) * 0.00006f,
+                    baseRadius = 1.8f + rand.nextFloat() * 0.8f,
+                    chromaticTint = spectralPalette[i % spectralPalette.size],
+                    kind = CosmicHeaderStarKind.BRILLIANT_FLARE,
+                    twinkleSpeed = 0.9f + rand.nextFloat() * 1.1f,
+                    phase = rand.nextFloat() * (2 * Math.PI.toFloat()),
+                    flareSpan = 10f + rand.nextFloat() * 6f
+                )
+            )
+        }
+
+        // 2. Mid-distance Stars with Corona Halos (10 stars)
+        repeat(10) { i ->
+            starList.add(
+                RealisticHeaderCosmicStar(
+                    x = rand.nextFloat(),
+                    y = 0.06f + rand.nextFloat() * 0.88f,
+                    vx = (rand.nextFloat() - 0.5f) * 0.00010f,
+                    vy = (rand.nextFloat() - 0.5f) * 0.00008f,
+                    baseRadius = 1.1f + rand.nextFloat() * 0.6f,
+                    chromaticTint = spectralPalette[(i + 2) % spectralPalette.size],
+                    kind = CosmicHeaderStarKind.CELESTIAL_SPARK,
+                    twinkleSpeed = 1.1f + rand.nextFloat() * 1.3f,
+                    phase = rand.nextFloat() * (2 * Math.PI.toFloat())
+                )
+            )
+        }
+
+        // 3. Deep Background Stardust Micro-Particles (16 particles)
+        repeat(16) { i ->
+            starList.add(
+                RealisticHeaderCosmicStar(
+                    x = rand.nextFloat(),
+                    y = 0.04f + rand.nextFloat() * 0.92f,
+                    vx = (rand.nextFloat() - 0.5f) * 0.00006f,
+                    vy = (rand.nextFloat() - 0.5f) * 0.00004f,
+                    baseRadius = 0.5f + rand.nextFloat() * 0.4f,
+                    chromaticTint = spectralPalette[(i + 4) % spectralPalette.size],
+                    kind = CosmicHeaderStarKind.DISTANT_STARDUST,
+                    twinkleSpeed = 0.6f + rand.nextFloat() * 0.8f,
+                    phase = rand.nextFloat() * (2 * Math.PI.toFloat())
+                )
+            )
+        }
+
+        starList
+    }
+
+    var frameTimeNanos by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            withFrameNanos { time ->
+                frameTimeNanos = time
+            }
+        }
+    }
+
+    Canvas(modifier = modifier) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        if (canvasWidth <= 0f || canvasHeight <= 0f) return@Canvas
+
+        val timeSec = (frameTimeNanos / 1_000_000_000.0).toFloat()
+
+        // 1. Render Calm Multi-Depth Stars
+        stars.forEach { star ->
+            star.x += star.vx
+            if (star.x < 0f) star.x += 1f
+            if (star.x > 1f) star.x -= 1f
+
+            star.y += star.vy
+            if (star.y < 0.02f) star.y += 0.96f
+            if (star.y > 0.98f) star.y -= 0.96f
+
+            // Non-linear organic twinkling scintillation
+            val wave1 = sin(timeSec * star.twinkleSpeed + star.phase)
+            val wave2 = sin(timeSec * (star.twinkleSpeed * 1.55f) + star.phase * 0.6f) * 0.35f
+            val harmonic = (wave1 + wave2).coerceIn(-1f, 1f)
+            val baseTwinkle = ((harmonic + 1f) * 0.5f)
+
+            // Smooth edge fade on all 4 borders so stars never pop or clip
+            val edgeFadeX = sin((star.x.coerceIn(0.01f, 0.99f)) * Math.PI.toFloat()).coerceIn(0f, 1f)
+            val edgeFadeY = sin((star.y.coerceIn(0.01f, 0.99f)) * Math.PI.toFloat()).coerceIn(0f, 1f)
+            val edgeFade = (edgeFadeX * edgeFadeY).coerceIn(0f, 1f)
+
+            val effectiveAlpha = (0.20f + 0.80f * baseTwinkle) * edgeFade * 0.85f
+            if (effectiveAlpha <= 0.02f) return@forEach
+
+            val px = star.x * canvasWidth
+            val py = star.y * canvasHeight
+
+            when (star.kind) {
+                CosmicHeaderStarKind.BRILLIANT_FLARE -> {
+                    val currentRadius = star.baseRadius * (0.85f + 0.35f * baseTwinkle)
+
+                    // Soft Outermost Corona Halo
+                    drawCircle(
+                        color = star.chromaticTint.copy(alpha = effectiveAlpha * 0.22f),
+                        radius = currentRadius * 3.6f,
+                        center = Offset(px, py)
+                    )
+
+                    // Inner Spectral Chromatic Halo
+                    drawCircle(
+                        color = star.chromaticTint.copy(alpha = effectiveAlpha * 0.55f),
+                        radius = currentRadius * 1.8f,
+                        center = Offset(px, py)
+                    )
+
+                    // Hot White Core
+                    drawCircle(
+                        color = Color.White.copy(alpha = effectiveAlpha * 0.95f),
+                        radius = currentRadius,
+                        center = Offset(px, py)
+                    )
+
+                    // Elegant 4-Point Optical Diffraction Spikes
+                    if (effectiveAlpha > 0.30f) {
+                        val spikeLength = star.flareSpan * (0.7f + 0.5f * baseTwinkle) * edgeFade
+                        val spikeAlpha = effectiveAlpha * 0.60f
+                        val spikeColor = star.chromaticTint.copy(alpha = spikeAlpha)
+
+                        drawLine(
+                            color = spikeColor,
+                            start = Offset(px - spikeLength, py),
+                            end = Offset(px + spikeLength, py),
+                            strokeWidth = 1.1f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = spikeColor,
+                            start = Offset(px, py - spikeLength),
+                            end = Offset(px, py + spikeLength),
+                            strokeWidth = 1.1f,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                CosmicHeaderStarKind.CELESTIAL_SPARK -> {
+                    val currentRadius = star.baseRadius * (0.85f + 0.30f * baseTwinkle)
+                    drawCircle(
+                        color = star.chromaticTint.copy(alpha = effectiveAlpha * 0.30f),
+                        radius = currentRadius * 2.2f,
+                        center = Offset(px, py)
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = effectiveAlpha * 0.85f),
+                        radius = currentRadius,
+                        center = Offset(px, py)
+                    )
+                }
+
+                CosmicHeaderStarKind.DISTANT_STARDUST -> {
+                    val dustAlpha = (effectiveAlpha * 0.60f).coerceIn(0f, 1f)
+                    drawCircle(
+                        color = star.chromaticTint.copy(alpha = dustAlpha),
+                        radius = star.baseRadius,
+                        center = Offset(px, py)
+                    )
+                }
+            }
+        }
+
+        // 2. Subtle Periodic Shooting Star Sweep (Active during window 0.0f..1.0f)
+        if (meteorProgress in 0.0f..1.0f) {
+            val meteorAlpha = sin(meteorProgress * Math.PI.toFloat()).coerceIn(0f, 1f) * 0.75f
+            if (meteorAlpha > 0.03f) {
+                val startX = (canvasWidth * 0.20f) + (canvasWidth * 0.65f) * meteorProgress
+                val startY = (canvasHeight * 0.15f) + (canvasHeight * 0.60f) * meteorProgress
+
+                val tailLengthX = canvasWidth * 0.10f
+                val tailLengthY = canvasHeight * 0.10f
+
+                val headPoint = Offset(startX, startY)
+                val tailPoint = Offset(startX - tailLengthX, startY - tailLengthY)
+
+                val tailBrush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0x00FFFFFF),
+                        Color(0xFF80D8FF).copy(alpha = meteorAlpha * 0.35f),
+                        Color.White.copy(alpha = meteorAlpha * 0.85f)
+                    ),
+                    start = tailPoint,
+                    end = headPoint
+                )
+
+                drawLine(
+                    brush = tailBrush,
+                    start = tailPoint,
+                    end = headPoint,
+                    strokeWidth = 1.6f,
+                    cap = StrokeCap.Round
+                )
+
+                drawCircle(
+                    color = Color.White.copy(alpha = meteorAlpha),
+                    radius = 1.6f,
+                    center = headPoint
+                )
+            }
+        }
+    }
+}
+
+/**
  * 3D Rotating Manga Cover with Boxcover Aura on back
  * Highly optimized for 64-bit and all Android architectures.
  * Uses a continuous 3D transform with hardware layer acceleration.
@@ -620,7 +910,7 @@ fun Rotating3DCoverCard(
     val isBackFace = normalizedRotation in 90f..270f
 
     Box(
-        modifier = modifier,
+        modifier = modifier.width(120.dp),
         contentAlignment = Alignment.Center
     ) {
         // ✨ Colorful Aura Halo / Radiant Glow behind the cover card
@@ -875,6 +1165,11 @@ fun MangaHeaderCard(
                             )
                         )
                     )
+            )
+
+            // 🌌 4.5 Cosmic Space Backdrop Stars (هالة نجوم فلكية هادئة تحاكي فوتر الفضاء)
+            CosmicHeaderStarsAura(
+                modifier = Modifier.matchParentSize()
             )
 
             // 📖 5. Foreground Content: 3D Cover, titles, and Glassmorphic badges in exact position
