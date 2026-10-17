@@ -217,6 +217,7 @@ fun ReaderScreen(
     DisposableEffect(chapter?.number) {
         onDispose {
             try {
+                com.olympus.cleaner.OlympusCleanerManager.cancelActive()
                 if (chapter != null && !uiState.isDownloaded) {
                     val imageLoader = Coil.imageLoader(context)
                     chapter.pages.forEach { page ->
@@ -1053,6 +1054,7 @@ fun ComicPageItem(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(imageUrl)
                             .crossfade(true)
+                            .transformations(com.olympus.cleaner.OlympusInpaintTransformation(LocalContext.current))
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             // 🚀 منع التطبيق من إدخال الفصول في الكاش الثابت للقرص:
                             .diskCachePolicy(if (isDownloaded) CachePolicy.ENABLED else CachePolicy.DISABLED)
@@ -1082,25 +1084,6 @@ fun ComicPageItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .onSizeChanged { imageSize = it }
-                    )
-                }
-            }
-
-            // 🎯 Ultra-Precise White Layer Watermark Clean Overlays (طبقة بيضاء دقيقة جداً فوق الكلمات المستهدفة)
-            if (isLoaded && watermarkData != null && watermarkData.boxes.isNotEmpty() && imageSize.width > 0 && imageSize.height > 0) {
-                val density = LocalDensity.current
-                watermarkData.boxes.forEach { box ->
-                    val leftDp = with(density) { (box.x * imageSize.width).toDp() }
-                    val topDp = with(density) { (box.y * imageSize.height).toDp() }
-                    val widthDp = with(density) { (box.width * imageSize.width).toDp() }
-                    val heightDp = with(density) { (box.height * imageSize.height).toDp() }
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(x = leftDp, y = topDp)
-                            .size(width = widthDp, height = heightDp)
-                            .background(Color.White)
                     )
                 }
             }

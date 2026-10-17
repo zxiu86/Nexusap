@@ -1,0 +1,6 @@
+{
+  "summary": "خطة متكاملة لدمج محرك Olympus Cleaner الأصلي (C++/JNI) في تطبيق Nexus:\n- تنظيم مكتبات jniLibs لدعم معماريتي arm64-v8a (libmtxv8a.so) و armeabi-v7a (libmtxv7a.so) مع معالجة التحميل الديناميكي الآمن.\n- إنشاء طبقة JNI Kotlin الرسمية com.olympus.cleaner.OlympusCleanerEngine وفق مواصفات API الموثقة مع إمكانية إلغاء العمليات ومعالجة الذاكرة بـ RAII.\n- استبدال نظام التنظيف القديم (ML Kit والمربعات البيضاء) بمحول صور مباشر (Coil Transformation / Inpainting Pipeline) ينفذ التنظيف الحقيقي في الذاكرة أثناء تحميل صفحات المانجا في القارئ.\n- تحديث واجهة القارئ وإعدادات التنظيف لربط محرك Olympus بالكامل دون المساس بأي ميزة أخرى في التطبيق.",
+  "updatedAt": "2026-10-17T18:36:05.770168687Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

@@ -39,6 +39,18 @@ class NexusApp : Application(), ImageLoaderFactory {
         } catch (t: Throwable) {
             Log.w("NexusApp", "Failed to init StartApp SDK: ${t.message}")
         }
+
+        // Initialize Olympus Text Cleaner native engine
+        try {
+            if (com.olympus.cleaner.OlympusCleanerEngine.isNativeAvailable()) {
+                Log.i("NexusApp", "Olympus Cleaner native engine ready (v${com.olympus.cleaner.OlympusCleanerEngine.getVersion()})")
+                com.olympus.cleaner.OlympusCleanerManager.getOrCreateEngine()
+            } else {
+                Log.w("NexusApp", "Olympus Cleaner: ${com.olympus.cleaner.OlympusCleanerEngine.getLoadError()}")
+            }
+        } catch (t: Throwable) {
+            Log.w("NexusApp", "Olympus Cleaner init warning: ${t.message}")
+        }
     }
 
     override fun newImageLoader(): ImageLoader {
