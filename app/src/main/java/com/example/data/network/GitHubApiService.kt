@@ -82,6 +82,17 @@ interface GitHubApiService {
     ): Response<List<GitHubReleaseDto>>
 
     /**
+     * Gets specific release by tag name
+     */
+    @GET("repos/{owner}/{repo}/releases/tags/{tag}")
+    @Headers("Accept: application/vnd.github.v3+json, application/json")
+    suspend fun getReleaseByTag(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("tag") tag: String
+    ): Response<GitHubReleaseDto>
+
+    /**
      * Gets file metadata including sha for updating repository files
      */
     @GET("repos/{owner}/{repo}/contents/{path}")

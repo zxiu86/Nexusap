@@ -128,7 +128,12 @@ object GitHubNetworkModule {
     }
 
     fun getDataRepo(): String = getConfiguredRepo()
-    fun getAppRepo(): String = DEFAULT_APP_REPO
+    fun getAppRepo(): String {
+        val repo = runCatching {
+            BuildConfig::class.java.getField("GITHUB_APP_REPO").get(null) as? String
+        }.getOrNull()?.trim()
+        return if (!repo.isNullOrEmpty() && repo != "placeholder" && repo != "null") repo else DEFAULT_APP_REPO
+    }
 
     fun getConfiguredBranch(): String {
         val custom = sharedPrefs?.getString(KEY_CUSTOM_BRANCH, null)?.trim()

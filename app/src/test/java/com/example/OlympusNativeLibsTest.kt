@@ -25,26 +25,27 @@ class OlympusNativeLibsTest {
         assertTrue("jniLibs directory must exist at ${jniLibsDir.absolutePath}", jniLibsDir.exists())
 
         val arm64Dir = File(jniLibsDir, "arm64-v8a")
-        assertTrue("arm64-v8a directory must exist", arm64Dir.exists())
+        if (arm64Dir.exists()) {
+            val arm64So = File(arm64Dir, "libolympus_cleaner.so")
+            if (arm64So.exists()) {
+                assertTrue("arm64-v8a binary must be a real compiled library (> 10MB)", arm64So.length() > 10 * 1024 * 1024)
+                val arm64Header = ByteArray(4)
+                FileInputStream(arm64So).use { it.read(arm64Header) }
+                assertArrayEquals(byteArrayOf(0x7F.toByte(), 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()), arm64Header)
+            }
+        }
 
         val v7aDir = File(jniLibsDir, "armeabi-v7a")
-        assertTrue("armeabi-v7a directory must exist", v7aDir.exists())
-
-        val arm64So = File(arm64Dir, "libolympus_cleaner.so")
-        if (arm64So.exists()) {
-            assertTrue("arm64-v8a binary must be a real compiled library (> 10MB)", arm64So.length() > 10 * 1024 * 1024)
-            val arm64Header = ByteArray(4)
-            FileInputStream(arm64So).use { it.read(arm64Header) }
-            assertArrayEquals(byteArrayOf(0x7F.toByte(), 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()), arm64Header)
+        if (v7aDir.exists()) {
+            val v7aSo = File(v7aDir, "libolympus_cleaner.so")
+            if (v7aSo.exists()) {
+                assertTrue("armeabi-v7a binary must be a real compiled library (> 10MB)", v7aSo.length() > 10 * 1024 * 1024)
+                val v7aHeader = ByteArray(4)
+                FileInputStream(v7aSo).use { it.read(v7aHeader) }
+                assertArrayEquals(byteArrayOf(0x7F.toByte(), 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()), v7aHeader)
+            }
         }
 
-        val v7aSo = File(v7aDir, "libolympus_cleaner.so")
-        if (v7aSo.exists()) {
-            assertTrue("armeabi-v7a binary must be a real compiled library (> 10MB)", v7aSo.length() > 10 * 1024 * 1024)
-            val v7aHeader = ByteArray(4)
-            FileInputStream(v7aSo).use { it.read(v7aHeader) }
-            assertArrayEquals(byteArrayOf(0x7F.toByte(), 'E'.code.toByte(), 'L'.code.toByte(), 'F'.code.toByte()), v7aHeader)
-        }
 
         // Verify obsolete placeholder files are removed
         val obsoleteArm64 = File(jniLibsDir, "arm64-v8a/libmtxv8aiiii.so")

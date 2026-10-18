@@ -119,22 +119,28 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
 
             val ctx = context ?: try { com.example.NexusApp.appContext } catch (_: Throwable) { null }
 
-            // 2. Direct path loading via nativeLibraryDir if context available
+            // 2. Direct path loading via nexus_native_libs or nativeLibraryDir if context available
             if (ctx != null) {
                 try {
-                    val nativeDir = java.io.File(ctx.applicationInfo.nativeLibraryDir)
-                    logDiagnostic("مسار المكتبات المستخرجة على الجهاز: ${nativeDir.absolutePath} (موجود: ${nativeDir.exists()})")
-                    if (nativeDir.exists()) {
+                    val searchDirs = listOf(
+                        ctx.getDir("nexus_native_libs", Context.MODE_PRIVATE),
+                        java.io.File(ctx.applicationInfo.nativeLibraryDir)
+                    )
+                    for (nativeDir in searchDirs) {
+                        if (loaded) break
+                        if (!nativeDir.exists()) continue
+
+                        logDiagnostic("فحص مسار المكتبات المستخرجة على الجهاز: ${nativeDir.absolutePath}")
                         val files = nativeDir.listFiles() ?: emptyArray()
                         val fileNames = files.map { it.name }
-                        logDiagnostic("المكتبات المتوفرة في مسار التطبيق: ${fileNames.joinToString()}")
+                        logDiagnostic("المكتبات المتوفرة في ${nativeDir.name}: ${fileNames.joinToString()}")
 
                         // Preload libc++_shared from native dir if present
                         val cppSharedFile = java.io.File(nativeDir, "libc++_shared.so")
                         if (cppSharedFile.exists()) {
                             try {
                                 System.load(cppSharedFile.absolutePath)
-                                logDiagnostic("✅ تم تحميل libc++_shared.so مباشرة من مسار التطبيق")
+                                logDiagnostic("✅ تم تحميل libc++_shared.so مباشرة من ${nativeDir.name}")
                             } catch (e: Throwable) {
                                 logDiagnostic("ملاحظة: تحميل libc++_shared مباشر: ${e.message}")
                             }
@@ -145,7 +151,7 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
                             val candidateFile = java.io.File(nativeDir, "lib$libName.so")
                             if (candidateFile.exists()) {
                                 try {
-                                    logDiagnostic("محاولة تحميل مباشر من المسار: ${candidateFile.name}...")
+                                    logDiagnostic("محاولة تحميل مباشر من المسار: ${candidateFile.absolutePath}...")
                                     System.load(candidateFile.absolutePath)
                                     logDiagnostic("✅ نجح التحميل المباشر للمكتبة: ${candidateFile.name}")
                                     loadedLibName = candidateFile.name
