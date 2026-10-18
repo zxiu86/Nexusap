@@ -78,9 +78,9 @@ object OlympusCleanerManager {
     /**
      * Resets the active engine and attempts to reload the native library.
      */
-    fun reloadEngine(): OlympusCleanerEngine? {
+    fun reloadEngine(context: Context? = null): OlympusCleanerEngine? {
         release()
-        OlympusCleanerEngine.loadNativeLibrary(forceReload = true)
+        OlympusCleanerEngine.loadNativeLibrary(context = context, forceReload = true)
         return getOrCreateEngine()
     }
 

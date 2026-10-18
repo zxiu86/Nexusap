@@ -42,6 +42,7 @@ class NexusApp : Application(), ImageLoaderFactory {
 
         // Initialize Olympus Text Cleaner native engine
         try {
+            com.olympus.cleaner.OlympusCleanerEngine.loadNativeLibrary(this)
             if (com.olympus.cleaner.OlympusCleanerEngine.isNativeAvailable()) {
                 Log.i("NexusApp", "Olympus Cleaner native engine ready (v${com.olympus.cleaner.OlympusCleanerEngine.getVersion()})")
                 com.olympus.cleaner.OlympusCleanerManager.getOrCreateEngine()

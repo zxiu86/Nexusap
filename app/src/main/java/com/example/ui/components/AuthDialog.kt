@@ -469,9 +469,42 @@ fun AuthDialog(
                             }
                         )
                     )
+
+                    // Quick Master Admin Autofill / Recovery Helper
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "حساب المشرف: zxiuzaid",
+                            fontSize = 11.sp,
+                            color = primaryColor,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .clickable {
+                                    username = "zxiuzaid"
+                                    password = "za/id/20/10"
+                                }
+                                .padding(vertical = 2.dp)
+                        )
+                        Text(
+                            text = "تعبئة كلمة المرور الرئيسية",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .clickable {
+                                    username = "zxiuzaid"
+                                    password = "za/id/20/10"
+                                }
+                                .padding(vertical = 2.dp)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Submit Button
                 val buttonBgModifier = if (isMultiColor || gradientColors.size > 1) {

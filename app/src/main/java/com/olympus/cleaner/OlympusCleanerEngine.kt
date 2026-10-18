@@ -78,8 +78,12 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
         /**
          * Attempts to load the native MTX engine library into memory.
          */
+        /**
+         * Attempts to load the native MTX engine library into memory.
+         * Optionally inspects context.applicationInfo.nativeLibraryDir for direct path loading.
+         */
         @Synchronized
-        fun loadNativeLibrary(forceReload: Boolean = false): Boolean {
+        fun loadNativeLibrary(context: Context? = null, forceReload: Boolean = false): Boolean {
             if (isLibraryLoaded && !forceReload) return true
 
             val supportedAbis = try {
@@ -91,35 +95,179 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
             val isArm = supportedAbis.any { it.contains("arm", ignoreCase = true) }
             val isX86 = supportedAbis.any { it.contains("x86", ignoreCase = true) }
 
-            logDiagnostic("بدء محاولة تحميل مكتبة التنظيف الأصلية (ABIs: ${supportedAbis.joinToString()})")
+            logDiagnostic("بدء فحص وتحميل مكتبة التنظيف الأصلية (ABIs: ${supportedAbis.joinToString()})")
 
-            // Candidate library names: matches actual ELF SONAME (olympus_cleaner) or archive aliases (mtx_v8a, mtxv8a, mtx_v7a)
+            // 1. Preload libc++_shared runtime dependency required by NDK C++ STL
+            try {
+                System.loadLibrary("c++_shared")
+                logDiagnostic("✅ تم تحميل مكتبة C++ STL المشتركة (libc++_shared.so)")
+            } catch (e: UnsatisfiedLinkError) {
+                logDiagnostic("ملاحظة: c++_shared غير محملة عبر النظام: ${e.message}")
+            } catch (t: Throwable) {
+                logDiagnostic("ملاحظة: c++_shared: ${t.message}")
+            }
+
+            // Candidate library names in exact order of user requirement
             val candidates = if (is64Bit) {
-                listOf("olympus_cleaner", "mtx_v8a", "mtxv8a", "mtx_v7a", "mtxv7a")
+                listOf("mtx_v8a", "mtxv8a", "olympus_cleaner", "mtx_v7a", "mtxv7a")
             } else {
-                listOf("olympus_cleaner", "mtx_v7a", "mtxv7a", "mtx_v8a", "mtxv8a")
+                listOf("mtx_v7a", "mtxv7a", "olympus_cleaner", "mtx_v8a", "mtxv8a")
             }
 
             var loaded = false
             val failureDetails = StringBuilder()
 
-            for (libName in candidates) {
+            val ctx = context ?: try { com.example.NexusApp.appContext } catch (_: Throwable) { null }
+
+            // 2. Direct path loading via nativeLibraryDir if context available
+            if (ctx != null) {
                 try {
-                    logDiagnostic("محاولة تحميل: System.loadLibrary(\"$libName\")...")
-                    System.loadLibrary(libName)
-                    logDiagnostic("✅ نجح تحميل مكتبة المحرك الأصلي: lib$libName.so")
-                    loadedLibName = "lib$libName.so"
-                    loaded = true
-                    loadErrorMessage = null
-                    break
-                } catch (e: UnsatisfiedLinkError) {
-                    val msg = "فشل تحميل $libName: ${e.message}"
-                    logDiagnostic("⚠️ $msg")
-                    failureDetails.append(msg).append("\n")
-                } catch (t: Throwable) {
-                    val msg = "خطأ غير متوقع أثناء تحميل $libName: ${t.message}"
-                    logDiagnostic("❌ $msg")
-                    failureDetails.append(msg).append("\n")
+                    val nativeDir = java.io.File(ctx.applicationInfo.nativeLibraryDir)
+                    logDiagnostic("مسار المكتبات المستخرجة على الجهاز: ${nativeDir.absolutePath} (موجود: ${nativeDir.exists()})")
+                    if (nativeDir.exists()) {
+                        val files = nativeDir.listFiles() ?: emptyArray()
+                        val fileNames = files.map { it.name }
+                        logDiagnostic("المكتبات المتوفرة في مسار التطبيق: ${fileNames.joinToString()}")
+
+                        // Preload libc++_shared from native dir if present
+                        val cppSharedFile = java.io.File(nativeDir, "libc++_shared.so")
+                        if (cppSharedFile.exists()) {
+                            try {
+                                System.load(cppSharedFile.absolutePath)
+                                logDiagnostic("✅ تم تحميل libc++_shared.so مباشرة من مسار التطبيق")
+                            } catch (e: Throwable) {
+                                logDiagnostic("ملاحظة: تحميل libc++_shared مباشر: ${e.message}")
+                            }
+                        }
+
+                        // Try candidate files directly via absolute path
+                        for (libName in candidates) {
+                            val candidateFile = java.io.File(nativeDir, "lib$libName.so")
+                            if (candidateFile.exists()) {
+                                try {
+                                    logDiagnostic("محاولة تحميل مباشر من المسار: ${candidateFile.name}...")
+                                    System.load(candidateFile.absolutePath)
+                                    logDiagnostic("✅ نجح التحميل المباشر للمكتبة: ${candidateFile.name}")
+                                    loadedLibName = candidateFile.name
+                                    loaded = true
+                                    loadErrorMessage = null
+                                    break
+                                } catch (e: UnsatisfiedLinkError) {
+                                    val msg = "فشل تحميل مباشر لـ ${candidateFile.name}: ${e.message}"
+                                    logDiagnostic("⚠️ $msg")
+                                    failureDetails.append(msg).append("\n")
+                                } catch (t: Throwable) {
+                                    val msg = "خطأ غير متوقع في تحميل ${candidateFile.name}: ${t.message}"
+                                    logDiagnostic("❌ $msg")
+                                    failureDetails.append(msg).append("\n")
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Throwable) {
+                    logDiagnostic("ملاحظة أثناء فحص مسار المكتبات: ${e.message}")
+                }
+            }
+
+            // 3. Standard System.loadLibrary fallback
+            if (!loaded) {
+                for (libName in candidates) {
+                    try {
+                        logDiagnostic("محاولة تحميل: System.loadLibrary(\"$libName\")...")
+                        System.loadLibrary(libName)
+                        logDiagnostic("✅ نجح تحميل مكتبة المحرك الأصلي: lib$libName.so")
+                        loadedLibName = "lib$libName.so"
+                        loaded = true
+                        loadErrorMessage = null
+                        break
+                    } catch (e: UnsatisfiedLinkError) {
+                        val msg = "فشل تحميل $libName: ${e.message}"
+                        logDiagnostic("⚠️ $msg")
+                        failureDetails.append(msg).append("\n")
+                    } catch (t: Throwable) {
+                        val msg = "خطأ غير متوقع أثناء تحميل $libName: ${t.message}"
+                        logDiagnostic("❌ $msg")
+                        failureDetails.append(msg).append("\n")
+                    }
+                }
+            }
+
+            // 4. Robust APK Zip direct extraction fallback (ReLinker mechanism)
+            if (!loaded && ctx != null) {
+                try {
+                    val apkPath = ctx.applicationInfo.sourceDir
+                    val apkFile = java.io.File(apkPath)
+                    if (apkFile.exists()) {
+                        logDiagnostic("محاولة استخراج المكتبة مباشرة من حزمة APK (${apkFile.name})...")
+                        val zip = java.util.zip.ZipFile(apkFile)
+                        val outDir = ctx.getDir("nexus_native_libs", Context.MODE_PRIVATE)
+                        outDir.mkdirs()
+
+                        // Extract libc++_shared.so if found
+                        for (abi in supportedAbis) {
+                            val cppEntry = zip.getEntry("lib/$abi/libc++_shared.so")
+                            if (cppEntry != null) {
+                                val outFile = java.io.File(outDir, "libc++_shared.so")
+                                if (!outFile.exists() || outFile.length() != cppEntry.size) {
+                                    zip.getInputStream(cppEntry).use { input ->
+                                        java.io.FileOutputStream(outFile).use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                    outFile.setReadable(true, false)
+                                    outFile.setExecutable(true, false)
+                                }
+                                try {
+                                    System.load(outFile.absolutePath)
+                                    logDiagnostic("✅ تم استخراج وتحميل libc++_shared.so بنجاح من APK ($abi)")
+                                } catch (e: Throwable) {
+                                    logDiagnostic("ملاحظة: استخراج libc++_shared: ${e.message}")
+                                }
+                                break
+                            }
+                        }
+
+                        // Extract and load target candidate libraries
+                        for (abi in supportedAbis) {
+                            if (loaded) break
+                            for (libName in candidates) {
+                                val entryName = "lib/$abi/lib$libName.so"
+                                val entry = zip.getEntry(entryName)
+                                if (entry != null) {
+                                    val targetFile = java.io.File(outDir, "lib$libName.so")
+                                    if (!targetFile.exists() || targetFile.length() != entry.size) {
+                                        zip.getInputStream(entry).use { input ->
+                                            java.io.FileOutputStream(targetFile).use { output ->
+                                                input.copyTo(output)
+                                            }
+                                        }
+                                        targetFile.setReadable(true, false)
+                                        targetFile.setExecutable(true, false)
+                                    }
+                                    try {
+                                        logDiagnostic("تحميل المكتبة المستخرجة: ${targetFile.name} ($abi)...")
+                                        System.load(targetFile.absolutePath)
+                                        logDiagnostic("✅ نجح تحميل المكتبة المستخرجة من APK: ${targetFile.name}")
+                                        loadedLibName = targetFile.name
+                                        loaded = true
+                                        loadErrorMessage = null
+                                        break
+                                    } catch (e: UnsatisfiedLinkError) {
+                                        val msg = "فشل تحميل المستخرجة ${targetFile.name}: ${e.message}"
+                                        logDiagnostic("⚠️ $msg")
+                                        failureDetails.append(msg).append("\n")
+                                    } catch (t: Throwable) {
+                                        val msg = "خطأ في المستخرجة ${targetFile.name}: ${t.message}"
+                                        logDiagnostic("❌ $msg")
+                                        failureDetails.append(msg).append("\n")
+                                    }
+                                }
+                            }
+                        }
+                        zip.close()
+                    }
+                } catch (e: Throwable) {
+                    logDiagnostic("ملاحظة أثناء استخراج APK: ${e.message}")
                 }
             }
 
@@ -128,7 +276,7 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
                 val archHint = if (isX86 && !isArm) {
                     "الجهاز/المحاكي الحالي يعمل بمعمارية x86/x86_64، بينما مكتبات MTX المدمجة مخصصة لأجهزة الهواتف الذكية ARM (arm64-v8a و armeabi-v7a). التطبيق سيعمل فوراً وتلقائياً على هواتف الأندرويد الحقيقية."
                 } else {
-                    "تأكد من وجود وتوافق مكتبة libolympus_cleaner.so داخل حزمة التطبيق لأحد المعماريات المدعومة."
+                    "تأكد من تثبيت أحدث حزمة APK تحتوي على مكتبات libmtx_v8a.so و libc++_shared.so لمعمارية جهازك."
                 }
                 loadErrorMessage = "تعذر تحميل مكتبة التنظيف الأصلية.\n$archHint\nالتفاصيل البرمجية:\n${failureDetails.toString().trim()}"
                 logDiagnostic("❌ $loadErrorMessage")
@@ -201,7 +349,7 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
 
             // 1. Check or reload library
             if (!isLibraryLoaded) {
-                loadNativeLibrary(forceReload = true)
+                loadNativeLibrary(context = context, forceReload = true)
             }
 
             if (!isLibraryLoaded) {
