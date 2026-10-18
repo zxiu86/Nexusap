@@ -69,6 +69,22 @@ object OlympusCleanerManager {
     }
 
     /**
+     * Executes the comprehensive self-diagnostic test on the native engine.
+     */
+    fun runDiagnosticTest(context: Context): CleanerDiagnosticResult {
+        return OlympusCleanerEngine.runDiagnosticTest(context)
+    }
+
+    /**
+     * Resets the active engine and attempts to reload the native library.
+     */
+    fun reloadEngine(): OlympusCleanerEngine? {
+        release()
+        OlympusCleanerEngine.loadNativeLibrary(forceReload = true)
+        return getOrCreateEngine()
+    }
+
+    /**
      * Closes the engine and frees all native memory.
      */
     fun release() {

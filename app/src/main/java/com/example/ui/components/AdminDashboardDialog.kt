@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +89,7 @@ import java.util.Date
 import java.util.Locale
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -96,8 +99,18 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import android.os.Build
+import com.olympus.cleaner.OlympusCleanerEngine
+import com.olympus.cleaner.OlympusCleanerManager
+import com.olympus.cleaner.CleanerDiagnosticResult
 
 @Composable
 fun AdminDashboardDialog(
@@ -137,9 +150,15 @@ fun AdminDashboardDialog(
     var isTokenVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
     val scrollState = rememberScrollState()
     val timeFormat = remember { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()) }
+
+    // Cleaner Diagnostic State
+    var cleanerTestResult by remember { mutableStateOf<CleanerDiagnosticResult?>(null) }
+    var isRunningCleanerTest by remember { mutableStateOf(false) }
+    var cleanerLogs by remember { mutableStateOf(OlympusCleanerEngine.getDiagnosticLogs()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -271,21 +290,23 @@ fun AdminDashboardDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Admin Tabs: 0: Overview, 1: Incoming Reports, 2: Broadcast Alerts, 3: GitHub Sync, 4: Security & Rules
+                // Admin Tabs: 0: Overview, 1: Incoming Reports, 2: Broadcast Alerts, 3: GitHub Sync, 4: Security & Rules, 5: Cleaner Diagnostic
                 val pendingCount = incomingReports.count { it.isPending() }
                 val tabs = listOf(
                     "الإحصائيات",
                     if (pendingCount > 0) "البلاغات ($pendingCount)" else "البلاغات",
                     "بث تنبيه",
                     "ربط GitHub",
-                    "الأمان"
+                    "الأمان",
+                    "فحص MTX"
                 )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(SurfaceElevated, RoundedCornerShape(16.dp))
+                        .horizontalScroll(rememberScrollState())
                         .padding(4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     tabs.forEachIndexed { index, label ->
                         val tabBackgroundModifier = if (selectedAdminTab == index) {
@@ -295,11 +316,10 @@ fun AdminDashboardDialog(
                         }
                         Box(
                             modifier = Modifier
-                                .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
                                 .then(tabBackgroundModifier)
                                 .clickable { selectedAdminTab = index }
-                                .padding(vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -361,7 +381,74 @@ fun AdminDashboardDialog(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            // Master Admin Credentials Card (للتذكير السريع والنسخ المباشر)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceElevated),
+                                border = BorderStroke(1.dp, NexusGold.copy(alpha = 0.35f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Key,
+                                                contentDescription = null,
+                                                tint = NexusGold,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                "بيانات تسجيل دخول المشرف الرئيسي",
+                                                color = TextPrimary,
+                                                fontSize = 12.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                clipboardManager.setText(AnnotatedString("المستخدم: zxiuzaid\nكلمة المرور: za/id/20/10"))
+                                                Toast.makeText(context, "تم نسخ بيانات حساب الأدمن", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = null,
+                                                tint = NexusGold,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("اسم المستخدم:", fontSize = 11.5.sp, color = TextSecondary)
+                                        Text("zxiuzaid", fontSize = 12.sp, color = NexusGold, fontWeight = FontWeight.Bold)
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("كلمة المرور:", fontSize = 11.5.sp, color = TextSecondary)
+                                        Text("za/id/20/10", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             // Action button: Manual Full Cloud Sync
                             OutlinedButton(
@@ -1152,6 +1239,431 @@ service cloud.firestore {
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("نسخ القواعد لـ Firebase Console", color = TextPrimary, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    // TAB 5: Olympus MTX Cleaner Diagnostic & Smart Error Log
+                    5 -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            val isLoaded = OlympusCleanerEngine.isNativeAvailable()
+                            val loadedLib = OlympusCleanerEngine.getLoadedLibraryName() ?: "libolympus_cleaner.so"
+                            val version = OlympusCleanerEngine.getVersion()
+                            val supportedAbis = try { Build.SUPPORTED_ABIS.joinToString(", ") } catch (_: Throwable) { "غير معروف" }
+
+                            // Engine Status Overview Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isLoaded) Color(0xFF10B981).copy(alpha = 0.5f) else NexusOrange.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CleaningServices,
+                                                contentDescription = null,
+                                                tint = if (isLoaded) Color(0xFF10B981) else NexusOrange,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Text(
+                                                text = "محرك التنظيف الذكي (Olympus MTX)",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isLoaded) Color(0xFF10B981).copy(alpha = 0.15f) else NexusOrange.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = if (isLoaded) "المحرك نشط" else "بانتظار الفحص",
+                                                color = if (isLoaded) Color(0xFF10B981) else NexusOrange,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("مكتبة C++/JNI:", fontSize = 11.5.sp, color = TextSecondary)
+                                            Text(loadedLib, fontSize = 11.5.sp, color = NexusGold, fontWeight = FontWeight.Bold)
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("إصدار المحرك الأصلي:", fontSize = 11.5.sp, color = TextSecondary)
+                                            Text(version, fontSize = 11.5.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("معمارية الجهاز (CPU ABIs):", fontSize = 11.5.sp, color = TextSecondary)
+                                            Text(supportedAbis, fontSize = 11.sp, color = TextSecondary)
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("العلامات المائية المنظفة إجمالاً:", fontSize = 11.5.sp, color = TextSecondary)
+                                            Text(
+                                                "${com.example.data.settings.AppSettingsManager.getInstance(context).getCleanedWatermarksCount()} شعار",
+                                                fontSize = 11.5.sp,
+                                                color = Color(0xFF10B981),
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Interactive Test Engine Action Button
+                            Button(
+                                onClick = {
+                                    if (isRunningCleanerTest) return@Button
+                                    isRunningCleanerTest = true
+                                    coroutineScope.launch {
+                                        try {
+                                            val result = OlympusCleanerManager.runDiagnosticTest(context)
+                                            cleanerTestResult = result
+                                            cleanerLogs = result.logs
+                                            if (result.isSuccess) {
+                                                Toast.makeText(context, "نجح فحص محرك التنظيف (${result.latencyMs}ms)", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "اكتمل الفحص مع تنبيه/ملاحظة", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "خطأ أثناء الاختبار: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isRunningCleanerTest = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(46.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent
+                                ),
+                                contentPadding = PaddingValues()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.horizontalGradient(listOf(NexusGold, NexusOrange))),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        if (isRunningCleanerTest) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                color = Color.Black,
+                                                strokeWidth = 2.dp
+                                            )
+                                            Text("جارِ اختبار المحرك ومعالجة صورة تجريبية...", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = null,
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                "تشغيل الفحص الذاتي التجريبي (Live Test)",
+                                                color = Color.Black,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Smart Diagnostic Alert / Result Card
+                            cleanerTestResult?.let { res ->
+                                if (res.isSuccess) {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF064E3B).copy(alpha = 0.4f)),
+                                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.6f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Text(
+                                                    "✅ نجح الاختبار المباشر!",
+                                                    color = Color(0xFF10B981),
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    "تم إنشاء مقبض المحرك وقفل بكسلات الصورة عبر JNI ومعالجتها بنجاح تام في ${res.latencyMs} ms (الإصدار: ${res.engineVersion}).",
+                                                    color = TextPrimary,
+                                                    fontSize = 11.5.sp,
+                                                    lineHeight = 16.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (res.warningMessage != null) {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF451A03).copy(alpha = 0.5f)),
+                                        border = BorderStroke(1.dp, NexusGold.copy(alpha = 0.6f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalAlignment = Alignment.Top,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Warning,
+                                                contentDescription = null,
+                                                tint = NexusGold,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(
+                                                    "💡 إنذار ذكي: معمارية الجهاز الحالي",
+                                                    color = NexusGold,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    res.warningMessage,
+                                                    color = TextPrimary,
+                                                    fontSize = 11.5.sp,
+                                                    lineHeight = 17.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF450A0A).copy(alpha = 0.5f)),
+                                        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.6f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalAlignment = Alignment.Top,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ErrorOutline,
+                                                contentDescription = null,
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(
+                                                    "🚨 إنذار خطأ في الآلية",
+                                                    color = Color(0xFFEF4444),
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    res.errorMessage ?: "حدث خطأ غير معروف أثناء تهيئة أو تشغيل المحرك.",
+                                                    color = TextPrimary,
+                                                    fontSize = 11.5.sp,
+                                                    lineHeight = 17.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Smart Error Log Console Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Terminal,
+                                                contentDescription = null,
+                                                tint = NexusGold,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                "سجل الأخطاء والتشخيص البرمجي (Error Log)",
+                                                color = TextPrimary,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color.White.copy(alpha = 0.1f)
+                                        ) {
+                                            Text(
+                                                "${cleanerLogs.size} سطر",
+                                                color = TextSecondary,
+                                                fontSize = 10.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // Console Box
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color(0xFF020617),
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+                                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                                    ) {
+                                        val logScroll = rememberScrollState()
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(10.dp)
+                                                .verticalScroll(logScroll),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            if (cleanerLogs.isEmpty()) {
+                                                Text(
+                                                    "لا توجد سجلات حالية. اضغط 'تشغيل الفحص الذاتي' لبدء الفحص والتشخيص.",
+                                                    color = TextSecondary.copy(alpha = 0.6f),
+                                                    fontSize = 11.sp,
+                                                    fontFamily = FontFamily.Monospace
+                                                )
+                                            } else {
+                                                cleanerLogs.forEach { line ->
+                                                    val lineColor = when {
+                                                        line.contains("✅") -> Color(0xFF10B981)
+                                                        line.contains("❌") -> Color(0xFFEF4444)
+                                                        line.contains("⚠️") -> NexusGold
+                                                        else -> TextSecondary
+                                                    }
+                                                    Text(
+                                                        text = line,
+                                                        color = lineColor,
+                                                        fontSize = 10.5.sp,
+                                                        fontFamily = FontFamily.Monospace,
+                                                        lineHeight = 14.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Console Action Buttons
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                val logText = cleanerLogs.joinToString("\n")
+                                                clipboardManager.setText(AnnotatedString(logText))
+                                                Toast.makeText(context, "تم نسخ سجل التشخيص للحافظة", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f).height(36.dp),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp), tint = NexusGold)
+                                                Text("نسخ السجل", fontSize = 11.5.sp)
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                OlympusCleanerManager.reloadEngine()
+                                                cleanerLogs = OlympusCleanerEngine.getDiagnosticLogs()
+                                                Toast.makeText(context, "تمت إعادة محاولة تحميل المحرك", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f).height(36.dp),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = NexusOrange)
+                                                Text("إعادة تحميل", fontSize = 11.5.sp)
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                OlympusCleanerEngine.clearDiagnosticLogs()
+                                                cleanerLogs = emptyList()
+                                                cleanerTestResult = null
+                                            },
+                                            modifier = Modifier.height(36.dp),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                                        ) {
+                                            Text("مسح", fontSize = 11.5.sp)
+                                        }
+                                    }
                                 }
                             }
                         }
