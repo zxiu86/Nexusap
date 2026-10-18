@@ -36,11 +36,11 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
             val supportedAbis = Build.SUPPORTED_ABIS ?: emptyArray()
             val is64Bit = supportedAbis.any { it.contains("64") }
 
-            // Candidate library names based on architecture and user specification
+            // Candidate library names based on the extracted MTX binary (libolympus_cleaner.so)
             val candidates = if (is64Bit) {
-                listOf("mtxv8a", "olympus_cleaner", "mtxv7a")
+                listOf("olympus_cleaner", "mtxv8a", "mtxv7a")
             } else {
-                listOf("mtxv7a", "olympus_cleaner", "mtxv8a")
+                listOf("olympus_cleaner", "mtxv7a", "mtxv8a")
             }
 
             var loaded = false
@@ -59,7 +59,7 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
 
             isLibraryLoaded = loaded
             if (!loaded) {
-                loadErrorMessage = "Native engine library not loaded. Ensure libmtxv8a.so (arm64-v8a) or libmtxv7a.so (armeabi-v7a) is installed."
+                loadErrorMessage = "Native engine library not loaded. Ensure libolympus_cleaner.so (arm64-v8a or armeabi-v7a) is installed."
                 Log.w(TAG, loadErrorMessage!!)
             }
         }
