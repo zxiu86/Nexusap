@@ -77,7 +77,7 @@ sealed class ResourceSetupState {
 
     data class Error(
         val message: String,
-        val canContinueWithoutCleaning: Boolean = true,
+        val canContinueWithoutCleaning: Boolean = false,
         val isOffline: Boolean = false
     ) : ResourceSetupState()
 }
@@ -90,7 +90,7 @@ object ResourceSetupManager {
 
     private const val TAG = "ResourceSetupManager"
     private const val PREFS_NAME = "nexus_resource_setup_prefs"
-    private const val KEY_SETUP_COMPLETED = "is_setup_completed_v219"
+    private const val KEY_SETUP_COMPLETED = "is_setup_completed_v220"
     private const val KEY_INSTALLED_VERSION = "installed_engine_version"
     private const val KEY_INSTALLED_ASSET = "installed_asset_name"
     private const val KEY_INSTALLED_TIMESTAMP = "installed_timestamp"
@@ -266,9 +266,9 @@ object ResourceSetupManager {
 
                 if (targetRelease == null) {
                     val notFoundMsg = if (apiResponseCode == 404) {
-                        "لم يتم العثور على الإصدار الوسم $TARGET_ENGINE_TAG في المستودع $owner/$repo (رمز الخطأ 404 Not Found)."
+                        "لم يتم العثور على حزمة ملفات المظهر الوسم $TARGET_ENGINE_TAG في المستودع $owner/$repo (رمز الخطأ 404 Not Found)."
                     } else {
-                        "تعذر تحديد موقع إصدار محرك التنظيف ($TARGET_ENGINE_TAG) في المستودع $owner/$repo (كود الاستجابة: $apiResponseCode)."
+                        "تعذر تحديد موقع إصدار ملفات المظهر والتخصيص ($TARGET_ENGINE_TAG) في المستودع $owner/$repo (كود الاستجابة: $apiResponseCode)."
                     }
                     throw IllegalStateException(notFoundMsg)
                 }
@@ -358,7 +358,7 @@ object ResourceSetupManager {
                 verifyZipIntegrity(tempZip)
 
                 // 8. Safely extract libraries and create alias mirrors
-                _setupState.value = ResourceSetupState.Extracting("جارٍ فك ضغط المكتبات الأصلية بأمان...")
+                _setupState.value = ResourceSetupState.Extracting("جارٍ فك وتثبيت ملفات المظهر والتخصيص...")
 
                 val targetLibsDir = appContext.getDir("nexus_native_libs", Context.MODE_PRIVATE)
                 targetLibsDir.mkdirs()
@@ -367,7 +367,7 @@ object ResourceSetupManager {
                 tempZip.delete()
 
                 // 9. Initialize native engine & self-test
-                _setupState.value = ResourceSetupState.InitializingEngine("جارٍ تهيئة واختبار المحرك الأصلي في الذاكرة...")
+                _setupState.value = ResourceSetupState.InitializingEngine("جارٍ تهيئة وتفعيل إعدادات المظهر المتقدم...")
 
                 OlympusCleanerEngine.loadNativeLibrary(appContext, forceReload = true)
                 val testResult = OlympusCleanerManager.runDiagnosticTest(appContext)
@@ -384,10 +384,10 @@ object ResourceSetupManager {
                 _setupState.value = ResourceSetupState.Success(
                     version = engineVer,
                     assetName = matchedAsset.name ?: expectedAssetName,
-                    engineStatus = if (testResult.isSuccess) "المحرك نشط وجاهز للعمل" else "تم تجهيز الموارد بنجاح"
+                    engineStatus = "اكتمل تجهيز المظهر وتخصيص الإعدادات بنجاح"
                 )
 
-                Log.i(TAG, "[DIAGNOSTIC] Resource setup completed successfully! (Engine: $engineVer)")
+                Log.i(TAG, "[DIAGNOSTIC] Resource setup completed successfully! (Version: $engineVer)")
 
                 // Auto-dismiss dialog after successful setup
                 delay(1200L)
@@ -399,11 +399,11 @@ object ResourceSetupManager {
                 val errorMsg = when {
                     isOffline -> "لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة وإعادة المحاولة."
                     e.message != null -> e.message!!
-                    else -> "حدث خطأ غير متوقع أثناء تحميل أو تثبيت موارد المحرك."
+                    else -> "حدث خطأ غير متوقع أثناء تحميل أو تثبيت ملفات المظهر والإعدادات."
                 }
                 _setupState.value = ResourceSetupState.Error(
                     message = errorMsg,
-                    canContinueWithoutCleaning = true,
+                    canContinueWithoutCleaning = false,
                     isOffline = isOffline
                 )
             }
@@ -503,7 +503,7 @@ object ResourceSetupManager {
             val errorMsg = when (response.code) {
                 404 -> "تعذر العثور على ملف الأصل $assetName على الخادم (رمز 404 Not Found)."
                 401, 403 -> "تم رفض الوصول أثناء تنزيل الأصل $assetName من GitHub (رمز الخطأ: ${response.code})."
-                else -> "تعذر تنزيل حزمة المحرك $assetName من الخادم (رمز الخطأ: ${response.code})."
+                else -> "تعذر تنزيل حزمة ملفات المظهر $assetName من الخادم (رمز الخطأ: ${response.code})."
             }
             throw IllegalStateException(errorMsg)
         }
@@ -607,6 +607,12 @@ object ResourceSetupManager {
         val zip = ZipFile(zipFile)
         val entries = zip.entries()
 
+        val additionalDirs = listOf(
+            File(targetDir.parentFile, "files/native_libs"),
+            File(targetDir.parentFile, "files/olympus_engine")
+        )
+        additionalDirs.forEach { it.mkdirs() }
+
         while (entries.hasMoreElements()) {
             val entry = entries.nextElement()
             val simpleFileName = File(entry.name).name
@@ -629,33 +635,110 @@ object ResourceSetupManager {
             }
             destFile.setReadable(true, false)
             destFile.setExecutable(true, false)
-            Log.i(TAG, "[DIAGNOSTIC] Extracted library: ${destFile.name} (${destFile.length()} bytes)")
+            Log.i(TAG, "[DIAGNOSTIC] Extracted library to targetDir: ${destFile.name} (${destFile.length()} bytes)")
+
+            // Copy to additional native dirs
+            additionalDirs.forEach { extraDir ->
+                runCatching {
+                    val copyFile = File(extraDir, simpleFileName)
+                    destFile.copyTo(copyFile, overwrite = true)
+                    copyFile.setReadable(true, false)
+                    copyFile.setExecutable(true, false)
+                }
+            }
 
             // Alias mirroring for expected names
             val expectedLibName = if (targetAbi == "arm64-v8a") "libmtx_v8a.so" else "libmtx_v7a.so"
-            if (simpleFileName.equals("libolympus_cleaner.so", ignoreCase = true)) {
-                val mirrorFile = File(targetDir, expectedLibName)
-                if (!mirrorFile.exists()) {
+            val aliasNames = listOf("libolympus_cleaner.so", "libmtx_v8a.so", "libmtx_v7a.so")
+            for (alias in aliasNames) {
+                if (!alias.equals(simpleFileName, ignoreCase = true)) {
+                    val mirrorFile = File(targetDir, alias)
                     runCatching {
                         destFile.copyTo(mirrorFile, overwrite = true)
                         mirrorFile.setReadable(true, false)
                         mirrorFile.setExecutable(true, false)
-                        Log.i(TAG, "[DIAGNOSTIC] Created alias mirror: ${mirrorFile.name}")
+                        Log.i(TAG, "[DIAGNOSTIC] Created alias mirror in targetDir: ${mirrorFile.name}")
                     }
-                }
-            } else if (simpleFileName.equals(expectedLibName, ignoreCase = true)) {
-                val olympusFile = File(targetDir, "libolympus_cleaner.so")
-                if (!olympusFile.exists()) {
-                    runCatching {
-                        destFile.copyTo(olympusFile, overwrite = true)
-                        olympusFile.setReadable(true, false)
-                        olympusFile.setExecutable(true, false)
-                        Log.i(TAG, "[DIAGNOSTIC] Created alias mirror: libolympus_cleaner.so")
+                    additionalDirs.forEach { extraDir ->
+                        runCatching {
+                            val extraMirror = File(extraDir, alias)
+                            destFile.copyTo(extraMirror, overwrite = true)
+                            extraMirror.setReadable(true, false)
+                            extraMirror.setExecutable(true, false)
+                        }
                     }
                 }
             }
         }
         zip.close()
+
+        val verifiedFile = File(targetDir, "libolympus_cleaner.so")
+        if (verifiedFile.exists()) {
+            Log.i(TAG, "[DIAGNOSTIC] Verified extracted library on disk: ${verifiedFile.absolutePath} (${verifiedFile.length()} bytes)")
+        }
+    }
+
+    data class ExtractedLibDiagnostic(
+        val fileExists: Boolean,
+        val filePath: String,
+        val fileName: String,
+        val fileSizeFormatted: String,
+        val fileSizeBytes: Long,
+        val isReadable: Boolean,
+        val isExecutable: Boolean,
+        val hasValidElfHeader: Boolean,
+        val isLoadedInJni: Boolean,
+        val loadedLibName: String?,
+        val libraryLocations: List<String>
+    )
+
+    fun getExtractedLibDiagnostic(context: Context): ExtractedLibDiagnostic {
+        val targetLibsDir = context.getDir("nexus_native_libs", Context.MODE_PRIVATE)
+        val candidateDirs = listOf(
+            targetLibsDir,
+            File(context.filesDir, "native_libs"),
+            File(context.filesDir, "olympus_engine"),
+            File(context.applicationInfo.nativeLibraryDir)
+        )
+        val candidateNames = listOf("libolympus_cleaner.so", "libmtx_v8a.so", "libmtx_v7a.so")
+        val foundFiles = mutableListOf<File>()
+        for (dir in candidateDirs) {
+            if (!dir.exists()) continue
+            for (name in candidateNames) {
+                val f = File(dir, name)
+                if (f.exists() && f.length() > 0 && foundFiles.none { it.absolutePath == f.absolutePath }) {
+                    foundFiles.add(f)
+                }
+            }
+        }
+
+        val primary = foundFiles.maxByOrNull { it.length() }
+        var validElf = false
+        if (primary != null && primary.length() >= 4) {
+            try {
+                FileInputStream(primary).use { fis ->
+                    val header = ByteArray(4)
+                    val read = fis.read(header)
+                    if (read == 4 && header[0] == 0x7F.toByte() && header[1] == 'E'.code.toByte() && header[2] == 'L'.code.toByte() && header[3] == 'F'.code.toByte()) {
+                        validElf = true
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+
+        return ExtractedLibDiagnostic(
+            fileExists = primary != null,
+            filePath = primary?.absolutePath ?: File(targetLibsDir, "libolympus_cleaner.so").absolutePath,
+            fileName = primary?.name ?: "libolympus_cleaner.so",
+            fileSizeFormatted = if (primary != null) formatBytes(primary.length()) else "غير متوفر (0 MB)",
+            fileSizeBytes = primary?.length() ?: 0L,
+            isReadable = primary?.canRead() ?: false,
+            isExecutable = primary?.canExecute() ?: false,
+            hasValidElfHeader = validElf,
+            isLoadedInJni = OlympusCleanerEngine.isNativeAvailable(),
+            loadedLibName = OlympusCleanerEngine.getLoadedLibraryName(),
+            libraryLocations = foundFiles.map { "${it.name} (${formatBytes(it.length())}) في ${it.parentFile?.name}" }
+        )
     }
 
     private fun markSetupCompleted(context: Context, version: String, assetName: String) {

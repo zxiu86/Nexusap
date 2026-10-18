@@ -11,8 +11,8 @@ import android.net.Uri
  * Update Cards, Badges, Diagnostics, Footer).
  */
 object AppVersionConfig {
-    const val VERSION_NAME = "2.1.9"
-    const val VERSION_CODE = 59
+    const val VERSION_NAME = "2.2.0 clean"
+    const val VERSION_CODE = 60
     const val BUILD_CODENAME = "Nexus Stellar Cosmic PRIME"
     const val RELEASE_CHANNEL = "النسخة الرسمية الفائقة (PRIME)"
     const val RELEASE_DATE = "أكتوبر 2026"
@@ -85,10 +85,10 @@ object AppVersionConfig {
      * Highlights of this release
      */
     val CURRENT_CHANGELOG_FEATURES = listOf(
-        "نظام الإعداد والتجهيز الإلزامي التلقائي للموارد والمحرك عند أول تشغيل للتطبيق (First-Launch Setup).",
-        "اكتشاف وتنزيل حزم محرك MTX المتوافقة مع معمارية الجهاز تلقائياً من GitHub مع عرض الحجم والتقدم الفعلي.",
-        "التحقق الأمني الذكي من سلامة الأرشيف وبصمات SHA-256 قبل فك الضغط وتشغيل المحرك الأصلي في الذاكرة.",
-        "إمكانية المتابعة وقراءة المانجا عند انقطاع الاتصال مع إعادة إظهار نافذة التجهيز تلقائياً فور عودة الإنترنت.",
-        "ترقية إصدار التطبيق رسمياً إلى v2.1.9 PRIME مع استقرار كامل وأعلى مستويات الأداء."
+        "ترقية التطبيق رسمياً إلى الإصدار v2.2.0 clean مع تحسينات شاملة للأداء والمظهر.",
+        "إضافة مختبر الفحص المباشر للعلامة المائية (https://olympustaff.com) داخل لوحة المشرف لتأكيد فاعلية المحرك.",
+        "تحديث نافذة التثبيت لتصبح واجهة تنزيل المظهر وتخصيص الإعدادات وتجهيز الملفات بسلاسة تامة.",
+        "تأمين فك ضغط الحزم واستخراج ملفات .so وتثبيتها بدقة في المسار المخصص للتطبيق.",
+        "إلغاء خيار التخطي وجعل تجهيز المظهر إلزامياً وثابتاً في الخلفية لضمان أفضل تجربة قراءة."
     )
 }

@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "description": "تطبيق Nexus الإصدار 2.1.9 مع نظام التجهيز الإلزامي لموارد ومحرك التنظيف MTX، تكامل سناب شات CODER، وفضاء النجوم الواقعي",
+  "description": "تطبيق Nexus الإصدار 2.2.0 clean مع نظام تنزيل المظاهر وتخصيص الإعدادات، ومختبر فحص العلامة المائية المباشر (olympustaff.com) في لوحة المشرف",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

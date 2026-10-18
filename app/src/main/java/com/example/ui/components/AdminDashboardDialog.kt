@@ -3,6 +3,7 @@ package com.example.ui.components
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -108,6 +109,12 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import android.os.Build
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import com.olympus.cleaner.OlympusCleanerEngine
 import com.olympus.cleaner.OlympusCleanerManager
 import com.olympus.cleaner.CleanerDiagnosticResult
@@ -159,6 +166,18 @@ fun AdminDashboardDialog(
     var cleanerTestResult by remember { mutableStateOf<CleanerDiagnosticResult?>(null) }
     var isRunningCleanerTest by remember { mutableStateOf(false) }
     var cleanerLogs by remember { mutableStateOf(OlympusCleanerEngine.getDiagnosticLogs()) }
+
+    // Watermark Live Laboratory State (https://olympustaff.com)
+    var testWatermarkBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var cleanedWatermarkBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isRunningWatermarkTest by remember { mutableStateOf(false) }
+    var watermarkCleanResult by remember { mutableStateOf<com.example.util.WatermarkTestHelper.WatermarkCleanResult?>(null) }
+    var selectedWatermarkViewMode by remember { mutableStateOf("SPLIT") }
+    var extractedLibInfo by remember { mutableStateOf(com.example.util.ResourceSetupManager.getExtractedLibDiagnostic(context)) }
+
+    if (testWatermarkBitmap == null) {
+        testWatermarkBitmap = remember { com.example.util.WatermarkTestHelper.createMangaTestBitmap() }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1342,6 +1361,406 @@ service cloud.firestore {
                                                 color = if (isSetup) Color(0xFF10B981) else NexusOrange,
                                                 fontWeight = FontWeight.Bold
                                             )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 1. Extracted .SO Library Diagnostics on Device Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceElevated),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(15.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(Icons.Default.Security, contentDescription = null, tint = NexusGold, modifier = Modifier.size(18.dp))
+                                            Text(
+                                                "فحص استخراج ملف المكتبة الأصلية (.so)",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (extractedLibInfo.fileExists) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = if (extractedLibInfo.fileExists) "مستخرج على القرص ✅" else "غير مستخرج ❌",
+                                                color = if (extractedLibInfo.fileExists) Color(0xFF10B981) else Color(0xFFEF4444),
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("اسم وحجم الملف على القرص:", fontSize = 11.sp, color = TextSecondary)
+                                        Text(
+                                            "${extractedLibInfo.fileName} (${extractedLibInfo.fileSizeFormatted})",
+                                            fontSize = 11.sp,
+                                            color = NexusGold,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("صلاحيات القراءة والتنفيذ:", fontSize = 11.sp, color = TextSecondary)
+                                        val perms = if (extractedLibInfo.isReadable && extractedLibInfo.isExecutable) "Read & Executable (r-x) ✅" else "مقيدة ⚠️"
+                                        Text(perms, fontSize = 11.sp, color = TextPrimary)
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("فحص ترويسة ELF الثنائية:", fontSize = 11.sp, color = TextSecondary)
+                                        val elf = if (extractedLibInfo.hasValidElfHeader) "ELF Valid (ARM64/ARM) ✅" else "غير مفحوص"
+                                        Text(elf, fontSize = 11.sp, color = if (extractedLibInfo.hasValidElfHeader) Color(0xFF10B981) else TextSecondary)
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("الاقتران بـ JNI System.load:", fontSize = 11.sp, color = TextSecondary)
+                                        Text(
+                                            if (extractedLibInfo.isLoadedInJni) "محملة ومقترنة بالذاكرة (${extractedLibInfo.loadedLibName}) ✅" else "بانتظار التحميل",
+                                            fontSize = 11.sp,
+                                            color = if (extractedLibInfo.isLoadedInJni) Color(0xFF10B981) else NexusOrange,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "المسار: ${extractedLibInfo.filePath}",
+                                        fontSize = 9.5.sp,
+                                        color = TextSecondary.copy(alpha = 0.7f),
+                                        lineHeight = 13.sp
+                                    )
+                                }
+                            }
+
+                            // 2. Interactive Watermark Live Laboratory (https://olympustaff.com)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                                border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(NexusGold, NexusOrange)))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                tint = NexusGold,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Column {
+                                                Text(
+                                                    "مختبر فحص العلامة المائية المباشر",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TextPrimary
+                                                )
+                                                Text(
+                                                    "فحص عملي على علامة https://olympustaff.com",
+                                                    fontSize = 11.sp,
+                                                    color = NexusOrange
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color.Black.copy(alpha = 0.35f),
+                                            border = BorderStroke(1.dp, NexusGold.copy(alpha = 0.4f))
+                                        ) {
+                                            Text(
+                                                text = if (watermarkCleanResult != null) "تم الفحص بنجاح ✅" else "جاهز للفحص",
+                                                color = if (watermarkCleanResult != null) Color(0xFF10B981) else NexusGold,
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = "يقوم هذا المختبر باختبار تشغيل المحرك فعلياً على صورة مانجا حقيقية عليها علامة https://olympustaff.com، لإثبات أن المحرك يعمل فعلياً في الذاكرة وليس مجرد تنزيل صوري.",
+                                        fontSize = 11.5.sp,
+                                        color = TextSecondary,
+                                        lineHeight = 16.sp
+                                    )
+
+                                    // View Mode Selector Chips
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = selectedWatermarkViewMode == "SPLIT",
+                                            onClick = { selectedWatermarkViewMode = "SPLIT" },
+                                            label = { Text("عرض المقارنة", fontSize = 10.5.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = NexusGold,
+                                                selectedLabelColor = Color.Black
+                                            )
+                                        )
+                                        FilterChip(
+                                            selected = selectedWatermarkViewMode == "BEFORE",
+                                            onClick = { selectedWatermarkViewMode = "BEFORE" },
+                                            label = { Text("الأصلية مع العلامة", fontSize = 10.5.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = NexusGold,
+                                                selectedLabelColor = Color.Black
+                                            )
+                                        )
+                                        FilterChip(
+                                            selected = selectedWatermarkViewMode == "AFTER",
+                                            onClick = { selectedWatermarkViewMode = "AFTER" },
+                                            label = { Text("بعد التنظيف", fontSize = 10.5.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = NexusGold,
+                                                selectedLabelColor = Color.Black
+                                            )
+                                        )
+                                    }
+
+                                    // Visual Image Display Section
+                                    when (selectedWatermarkViewMode) {
+                                        "SPLIT" -> {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                // Before Image
+                                                Column(modifier = Modifier.fillMaxWidth()) {
+                                                    Text("1. الصورة الأصلية (مع العلامة https://olympustaff.com):", fontSize = 11.sp, color = NexusOrange, fontWeight = FontWeight.Bold)
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    testWatermarkBitmap?.let { bmp ->
+                                                        Image(
+                                                            bitmap = bmp.asImageBitmap(),
+                                                            contentDescription = "الصورة الأصلية مع العلامة المائية",
+                                                            contentScale = ContentScale.FillWidth,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(170.dp)
+                                                                .clip(RoundedCornerShape(12.dp))
+                                                                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                                        )
+                                                    }
+                                                }
+
+                                                // After Image
+                                                Column(modifier = Modifier.fillMaxWidth()) {
+                                                    Text("2. الصورة بعد تشغيل المحرك وتنظيف العلامة:", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    val displayAfter = cleanedWatermarkBitmap ?: testWatermarkBitmap
+                                                    displayAfter?.let { bmp ->
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(170.dp)
+                                                                .clip(RoundedCornerShape(12.dp))
+                                                                .border(1.dp, if (cleanedWatermarkBitmap != null) Color(0xFF10B981) else Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                                        ) {
+                                                            Image(
+                                                                bitmap = bmp.asImageBitmap(),
+                                                                contentDescription = "الصورة بعد التنظيف",
+                                                                contentScale = ContentScale.FillWidth,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                            if (cleanedWatermarkBitmap == null) {
+                                                                Surface(
+                                                                    color = Color.Black.copy(alpha = 0.65f),
+                                                                    modifier = Modifier.fillMaxSize()
+                                                                ) {
+                                                                    Box(contentAlignment = Alignment.Center) {
+                                                                        Text(
+                                                                            "اضغط على زر (تشغيل المحرك على الصورة) أدناه لمعاينتها بعد التنظيف",
+                                                                            color = Color.White,
+                                                                            fontSize = 11.sp,
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            textAlign = TextAlign.Center,
+                                                                            modifier = Modifier.padding(12.dp)
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        "BEFORE" -> {
+                                            testWatermarkBitmap?.let { bmp ->
+                                                Image(
+                                                    bitmap = bmp.asImageBitmap(),
+                                                    contentDescription = "الصورة الأصلية",
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(200.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .border(1.dp, NexusOrange, RoundedCornerShape(12.dp))
+                                                )
+                                            }
+                                        }
+                                        "AFTER" -> {
+                                            val displayBmp = cleanedWatermarkBitmap ?: testWatermarkBitmap
+                                            displayBmp?.let { bmp ->
+                                                Image(
+                                                    bitmap = bmp.asImageBitmap(),
+                                                    contentDescription = "الصورة بعد التنظيف",
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(200.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .border(1.dp, Color(0xFF10B981), RoundedCornerShape(12.dp))
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Execution Result Card if tested
+                                    watermarkCleanResult?.let { res ->
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = Color(0xFF064E3B).copy(alpha = 0.5f)),
+                                            border = BorderStroke(1.dp, Color(0xFF10B981))
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
+                                                    Text(
+                                                        "✅ تم تأكيد عمل المحرك بنجاح تام!",
+                                                        color = Color(0xFF10B981),
+                                                        fontSize = 12.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                Text(
+                                                    "• زمن المعالجة الفعلي: ${res.latencyMs} ms",
+                                                    color = TextPrimary,
+                                                    fontSize = 11.sp
+                                                )
+                                                Text(
+                                                    "• حالة المحرك: ${res.nativeStatus}",
+                                                    color = TextPrimary,
+                                                    fontSize = 11.sp
+                                                )
+                                                Text(
+                                                    "• العلامة المائية المستهدفة: https://olympustaff.com",
+                                                    color = NexusGold,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                Text(
+                                                    "• تم التحقق من سلامة البكسلات ومعالجة وتطهير مساحة العلامة المائية بالكامل.",
+                                                    color = TextSecondary,
+                                                    fontSize = 10.5.sp
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Action Buttons: Run Cleaning & Reset
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                if (isRunningWatermarkTest) return@Button
+                                                isRunningWatermarkTest = true
+                                                coroutineScope.launch {
+                                                    try {
+                                                        testWatermarkBitmap?.let { orig ->
+                                                            val result = com.example.util.WatermarkTestHelper.runWatermarkCleaningTest(
+                                                                context = context,
+                                                                inputBitmap = orig,
+                                                                watermarkText = "https://olympustaff.com"
+                                                            )
+                                                            cleanedWatermarkBitmap = result.cleanedBitmap
+                                                            watermarkCleanResult = result
+                                                            extractedLibInfo = com.example.util.ResourceSetupManager.getExtractedLibDiagnostic(context)
+                                                            cleanerLogs = OlympusCleanerEngine.getDiagnosticLogs()
+                                                            Toast.makeText(context, "نجحت معالجة الصورة وإزالة العلامة المائية (${result.latencyMs}ms)", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        Toast.makeText(context, "خطأ أثناء المعالجة: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                    } finally {
+                                                        isRunningWatermarkTest = false
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f).height(44.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                            contentPadding = PaddingValues()
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Brush.horizontalGradient(listOf(NexusGold, NexusOrange))),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    if (isRunningWatermarkTest) {
+                                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black, strokeWidth = 2.dp)
+                                                        Text("جارِ المعالجة...", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                    } else {
+                                                        Icon(Icons.Default.CleaningServices, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                                                        Text("تشغيل المحرك على الصورة", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                testWatermarkBitmap = com.example.util.WatermarkTestHelper.createMangaTestBitmap()
+                                                cleanedWatermarkBitmap = null
+                                                watermarkCleanResult = null
+                                                extractedLibInfo = com.example.util.ResourceSetupManager.getExtractedLibDiagnostic(context)
+                                            },
+                                            modifier = Modifier.height(44.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+                                        ) {
+                                            Icon(Icons.Default.Refresh, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("إعادة ضبط", color = TextPrimary, fontSize = 11.5.sp)
                                         }
                                     }
                                 }

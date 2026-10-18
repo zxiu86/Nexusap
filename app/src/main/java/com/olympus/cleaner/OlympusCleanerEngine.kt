@@ -124,6 +124,8 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
                 try {
                     val searchDirs = listOf(
                         ctx.getDir("nexus_native_libs", Context.MODE_PRIVATE),
+                        java.io.File(ctx.filesDir, "native_libs"),
+                        java.io.File(ctx.filesDir, "olympus_engine"),
                         java.io.File(ctx.applicationInfo.nativeLibraryDir)
                     )
                     for (nativeDir in searchDirs) {

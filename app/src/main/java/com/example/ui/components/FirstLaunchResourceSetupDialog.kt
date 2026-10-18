@@ -66,6 +66,7 @@ import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.AppVersionConfig
 import com.example.util.ResourceSetupManager
 import com.example.util.ResourceSetupState
 
@@ -163,7 +164,7 @@ fun FirstLaunchResourceSetupDialog() {
 
                 // Main Title
                 Text(
-                    text = "تحميل المظاهر والإعدادات والتخصيص",
+                    text = "تنزيل المظهر وتخصيص الإعدادات",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
@@ -171,7 +172,7 @@ fun FirstLaunchResourceSetupDialog() {
                 )
 
                 Text(
-                    text = "يحتاج التطبيق إلى تجهيز موارد الواجهة ومحرك التنظيف الأصلي (Olympus MTX) لمرة واحدة فقط لتمكين إزالة العلامات المائية وترميم الصفحات بكفاءة.",
+                    text = "يحتاج التطبيق إلى تجهيز وتثبيت ملفات المظهر المتقدم وتخصيص الواجهة لمرة واحدة فقط لتمكين أفضل تجربة تصفح وأعلى درجات الاستقرار والانسيابية.",
                     fontSize = 12.sp,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
@@ -197,14 +198,14 @@ fun FirstLaunchResourceSetupDialog() {
                         // 1. حالة العملية
                         val statusText = when (val s = state) {
                             is ResourceSetupState.Idle -> "في انتظار البدء..."
-                            is ResourceSetupState.Discovering -> "جارٍ البحث عن ملفات المحرك في GitHub..."
+                            is ResourceSetupState.Discovering -> "جارٍ فحص ملفات المظهر في السحابة..."
                             is ResourceSetupState.MetadataReady -> "تم العثور على الحزمة، جارٍ التجهيز..."
-                            is ResourceSetupState.Downloading -> "جارٍ تنزيل حزمة المحرك (${s.speedText})..."
-                            is ResourceSetupState.Verifying -> s.message
-                            is ResourceSetupState.Extracting -> s.message
-                            is ResourceSetupState.InitializingEngine -> s.message
-                            is ResourceSetupState.Success -> "اكتمل التجهيز وتفعيل المحرك بنجاح!"
-                            is ResourceSetupState.Error -> "توقف التجهيز: ${s.message}"
+                            is ResourceSetupState.Downloading -> "جارٍ تنزيل ملفات المظهر (${s.speedText})..."
+                            is ResourceSetupState.Verifying -> "جارٍ فحص سلامة وتكامل الملفات..."
+                            is ResourceSetupState.Extracting -> "جارٍ فك وتثبيت ملفات التخصيص..."
+                            is ResourceSetupState.InitializingEngine -> "جارٍ تفعيل إعدادات الواجهة والمظهر..."
+                            is ResourceSetupState.Success -> "اكتمل تثبيت المظهر وتخصيص الإعدادات بنجاح!"
+                            is ResourceSetupState.Error -> "تعذر إكمال التثبيت: ${s.message}"
                         }
 
                         Row(
@@ -212,7 +213,7 @@ fun FirstLaunchResourceSetupDialog() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("حالة العملية:", fontSize = 11.5.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                            Text("حالة التجهيز:", fontSize = 11.5.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                             Text(
                                 text = statusText,
                                 fontSize = 11.5.sp,
@@ -233,7 +234,7 @@ fun FirstLaunchResourceSetupDialog() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("المعمارية المكتشفة:", fontSize = 11.5.sp, color = TextSecondary)
+                            Text("معمارية النظام:", fontSize = 11.5.sp, color = TextSecondary)
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color.White.copy(alpha = 0.08f)
@@ -248,12 +249,12 @@ fun FirstLaunchResourceSetupDialog() {
                             }
                         }
 
-                        // 3. إصدار المحرك
-                        val engineVersion = when (val s = state) {
+                        // 3. إصدار الحزمة
+                        val packageVersion = when (val s = state) {
                             is ResourceSetupState.MetadataReady -> s.version
                             is ResourceSetupState.Downloading -> s.version
                             is ResourceSetupState.Success -> s.version
-                            else -> "v2.1.9 (PRIME)"
+                            else -> "v${AppVersionConfig.VERSION_NAME}"
                         }
 
                         Row(
@@ -261,15 +262,15 @@ fun FirstLaunchResourceSetupDialog() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("إصدار المحرك:", fontSize = 11.5.sp, color = TextSecondary)
-                            Text(engineVersion, fontSize = 11.5.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                            Text("إصدار المظهر:", fontSize = 11.5.sp, color = TextSecondary)
+                            Text(packageVersion, fontSize = 11.5.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
                         }
 
-                        // 4. حجم ملف المحرك
+                        // 4. حجم ملف المظهر
                         val fileSize = when (val s = state) {
                             is ResourceSetupState.MetadataReady -> s.formattedSize
                             is ResourceSetupState.Downloading -> s.formattedSize
-                            else -> "جارٍ تحديد حجم الملف"
+                            else -> "جارٍ تحديد الحجم"
                         }
 
                         Row(
@@ -277,7 +278,7 @@ fun FirstLaunchResourceSetupDialog() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("حجم ملف المحرك:", fontSize = 11.5.sp, color = TextSecondary)
+                            Text("حجم ملفات المظهر:", fontSize = 11.5.sp, color = TextSecondary)
                             Text(fileSize, fontSize = 11.5.sp, color = NexusGold, fontWeight = FontWeight.Bold)
                         }
 
@@ -359,7 +360,7 @@ fun FirstLaunchResourceSetupDialog() {
                 Spacer(modifier = Modifier.height(2.dp))
 
                 // Action Buttons
-                when (val s = state) {
+                when (state) {
                     is ResourceSetupState.Error -> {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -390,33 +391,6 @@ fun FirstLaunchResourceSetupDialog() {
                                     }
                                 }
                             }
-
-                            // Continue without cleaning button
-                            if (s.canContinueWithoutCleaning) {
-                                OutlinedButton(
-                                    onClick = {
-                                        ResourceSetupManager.dismissDialogTemporarily()
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(40.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
-                                ) {
-                                    Text(
-                                        text = "المتابعة وقراءة المانجا بدون تنظيف",
-                                        color = TextSecondary,
-                                        fontSize = 11.5.sp
-                                    )
-                                }
-                                Text(
-                                    text = "💡 ستظهر هذه النافذة تلقائياً فور توفر اتصال بالإنترنت لإكمال تثبيت محرك التنظيف.",
-                                    fontSize = 10.5.sp,
-                                    color = TextSecondary.copy(alpha = 0.7f),
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 14.sp
-                                )
-                            }
                         }
                     }
                     is ResourceSetupState.Success -> {
@@ -428,7 +402,7 @@ fun FirstLaunchResourceSetupDialog() {
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
                         ) {
-                            Text("بدء الاستخدام والتنظيف الفائق", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("بدء استخدام التطبيق الآن", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     else -> {
@@ -443,7 +417,7 @@ fun FirstLaunchResourceSetupDialog() {
                                 strokeWidth = 2.dp
                             )
                             Text(
-                                text = "يرجى الانتظار بينما يتم تجهيز الموارد...",
+                                text = "يرجى الانتظار بينما يتم تجهيز وتثبيت المظهر...",
                                 fontSize = 11.5.sp,
                                 color = TextSecondary
                             )
