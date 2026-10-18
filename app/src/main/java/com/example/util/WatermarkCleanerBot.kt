@@ -120,7 +120,7 @@ object WatermarkCleanerBot {
             val imageUrl = page.imageUrl
             if (imageUrl.isNullOrBlank()) continue
 
-            if (engine != null && OlympusCleanerEngine.isNativeAvailable()) {
+            if (ResourceSetupManager.isSetupCompleted(context) && engine != null && OlympusCleanerEngine.isNativeAvailable()) {
                 val bitmap = obtainPageBitmap(context, imageUrl)
                 if (bitmap != null) {
                     try {

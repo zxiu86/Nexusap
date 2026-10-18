@@ -27,11 +27,18 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         com.example.util.InAppUpdateManager.checkPendingInstall(this)
+        if (!com.example.util.ResourceSetupManager.isSetupCompleted(this)) {
+            com.example.util.ResourceSetupManager.showSetupDialog(this)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize First-Launch Resource Setup System
+        com.example.util.ResourceSetupManager.initialize(this)
+
         setContent {
             val homeState by viewModel.homeUiState.collectAsState()
             val settings = homeState.appSettings
@@ -54,6 +61,9 @@ class MainActivity : ComponentActivity() {
                         viewModel = viewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
+
+                    // Mandatory First-Launch Setup Dialog for Themes, Settings & MTX Engine
+                    com.example.ui.components.FirstLaunchResourceSetupDialog()
                 }
             }
         }

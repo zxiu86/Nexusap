@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "description": "تطبيق Nexus الإصدار 2.1.8 مع واجهة فحص محرك التنظيف الذكي وسجل الأخطاء، تكامل سناب شات CODER، وفضاء النجوم الواقعي",
+  "description": "تطبيق Nexus الإصدار 2.1.9 مع نظام التجهيز الإلزامي لموارد ومحرك التنظيف MTX، تكامل سناب شات CODER، وفضاء النجوم الواقعي",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

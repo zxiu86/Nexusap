@@ -21,8 +21,8 @@ android {
     applicationId = "com.aistudio.nexus.manga"
     minSdk = 24
     targetSdk = 36
-    versionCode = 58
-    versionName = "2.1.8"
+    versionCode = 59
+    versionName = "2.1.9"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

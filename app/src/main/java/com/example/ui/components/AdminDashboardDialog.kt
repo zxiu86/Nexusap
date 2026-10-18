@@ -1334,11 +1334,12 @@ service cloud.firestore {
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text("العلامات المائية المنظفة إجمالاً:", fontSize = 11.5.sp, color = TextSecondary)
+                                            Text("حالة إعداد وتجهيز الموارد:", fontSize = 11.5.sp, color = TextSecondary)
+                                            val isSetup = com.example.util.ResourceSetupManager.isSetupCompleted(context)
                                             Text(
-                                                "${com.example.data.settings.AppSettingsManager.getInstance(context).getCleanedWatermarksCount()} شعار",
+                                                if (isSetup) "مكتمل ومثبت ✅" else "غير مكتمل ⚠️",
                                                 fontSize = 11.5.sp,
-                                                color = Color(0xFF10B981),
+                                                color = if (isSetup) Color(0xFF10B981) else NexusOrange,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
@@ -1407,6 +1408,26 @@ service cloud.firestore {
                                             )
                                         }
                                     }
+                                }
+                            }
+
+                            // Trigger Resource Setup System Dialog Button
+                            OutlinedButton(
+                                onClick = {
+                                    com.example.util.ResourceSetupManager.showSetupDialog(context)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(42.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, NexusGold.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = NexusGold, modifier = Modifier.size(18.dp))
+                                    Text("فتح نافذة تحميل المظاهر والمحرك (Setup Dialog)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 

@@ -14,14 +14,14 @@ class OlympusInpaintTransformation(
     private val enabled: Boolean = true
 ) : Transformation {
 
-    override val cacheKey: String = if (enabled && OlympusCleanerEngine.isNativeAvailable()) {
+    override val cacheKey: String = if (enabled && com.example.util.ResourceSetupManager.isSetupCompleted(context) && OlympusCleanerEngine.isNativeAvailable()) {
         "olympus_inpaint_v1_active"
     } else {
         "olympus_inpaint_passthrough"
     }
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
-        if (!enabled || !OlympusCleanerEngine.isNativeAvailable()) {
+        if (!enabled || !com.example.util.ResourceSetupManager.isSetupCompleted(context) || !OlympusCleanerEngine.isNativeAvailable()) {
             return input
         }
 
