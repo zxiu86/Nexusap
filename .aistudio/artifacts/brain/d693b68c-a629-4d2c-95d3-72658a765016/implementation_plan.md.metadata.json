@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan to fix GitHub Release asset discovery and HTTP 404 errors for the native MTX engine downloader:\n- Query GitHub Releases API by specific tag '0.0.1' on repository 'Nexusap' rather than relying on '/releases/latest'.\n- Locate assets by exact names 'libmtx_v8a.zip' and 'libmtx_v7a.zip' from API assets array and parsed release attachments.\n- Extract download URL directly from browser_download_url and avoid manual URL construction.\n- Enhanced ABI detection for arm64-v8a and armeabi-v7a.\n- Read dynamic file sizes and handle HTTP redirects, 404, 401/403, and network errors with diagnostic logging.\n- Preserve existing ZIP integrity checks, extraction, and UI components.",
-  "updatedAt": "2026-10-18T20:31:16.279252680Z",
+  "summary": "خطة تشغيل واختبار محرك التنظيف الحقيقي (MTX Engine Live Inpainting Test) في لوحة الإدارة:\n- اعتماد الأسماء الأصلية الصريحة libmtx_v8a.so و libmtx_v7a.so في مقدمة أولويات محرك التحميل.\n- إجراء اختبار معالجة وإزالة علامات مائية حقيقي وتفاعلي على صورة تجريبية تحمل ختم olympustaff.com عبر JNI.\n- عرض مقارنة بصرية حية (قبل وبعد التنظيف) مع قياس زمن الاستجابة الفعلي وحالة المقبض الأصلي في لوحة تحكم المشرف.\n- توفير آلية فحص تشخيصي عميقة مع معالجة ذكية لمعمارية الأجهزة (ARM64 و ARMv7) والشفافية الكاملة بدون بيانات وهمية.",
+  "updatedAt": "2026-10-19T11:37:02.496378501Z",
   "requestFeedback": true,
   "userFacing": true
 }

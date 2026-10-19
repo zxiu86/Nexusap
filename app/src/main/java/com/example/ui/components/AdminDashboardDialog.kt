@@ -1672,18 +1672,24 @@ service cloud.firestore {
                                                     fontSize = 11.sp
                                                 )
                                                 Text(
+                                                    "• البكسلات المعالجة: ${res.pixelsModified} px (إزالة حقيقية وتطهير للعلامة)",
+                                                    color = Color(0xFF10B981),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
                                                     "• حالة المحرك: ${res.nativeStatus}",
                                                     color = TextPrimary,
                                                     fontSize = 11.sp
                                                 )
                                                 Text(
-                                                    "• العلامة المائية المستهدفة: https://olympustaff.com",
+                                                    "• العلامة المائية المستهدفة: olympustaff.com",
                                                     color = NexusGold,
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                                 Text(
-                                                    "• تم التحقق من سلامة البكسلات ومعالجة وتطهير مساحة العلامة المائية بالكامل.",
+                                                    "• تم التحقق من سلامة البكسلات ومعالجة وتطهير مساحة العلامة المائية بالكامل دون كتابة نصوص وهمية.",
                                                     color = TextSecondary,
                                                     fontSize = 10.5.sp
                                                 )
@@ -1706,7 +1712,7 @@ service cloud.firestore {
                                                             val result = com.example.util.WatermarkTestHelper.runWatermarkCleaningTest(
                                                                 context = context,
                                                                 inputBitmap = orig,
-                                                                watermarkText = "https://olympustaff.com"
+                                                                watermarkText = "olympustaff.com"
                                                             )
                                                             cleanedWatermarkBitmap = result.cleanedBitmap
                                                             watermarkCleanResult = result
@@ -1776,8 +1782,15 @@ service cloud.firestore {
                                             val result = OlympusCleanerManager.runDiagnosticTest(context)
                                             cleanerTestResult = result
                                             cleanerLogs = result.logs
+                                            if (result.beforeBitmap != null) {
+                                                testWatermarkBitmap = result.beforeBitmap
+                                            }
+                                            if (result.afterBitmap != null) {
+                                                cleanedWatermarkBitmap = result.afterBitmap
+                                            }
+                                            extractedLibInfo = com.example.util.ResourceSetupManager.getExtractedLibDiagnostic(context)
                                             if (result.isSuccess) {
-                                                Toast.makeText(context, "نجح فحص محرك التنظيف (${result.latencyMs}ms)", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "نجح فحص المحرك وإزالة العلامة (${result.latencyMs}ms)", Toast.LENGTH_SHORT).show()
                                             } else {
                                                 Toast.makeText(context, "اكتمل الفحص مع تنبيه/ملاحظة", Toast.LENGTH_SHORT).show()
                                             }
@@ -1811,7 +1824,7 @@ service cloud.firestore {
                                                 color = Color.Black,
                                                 strokeWidth = 2.dp
                                             )
-                                            Text("جارِ اختبار المحرك ومعالجة صورة تجريبية...", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                            Text("جارِ اختبار المحرك وإزالة علامة olympustaff.com...", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                         } else {
                                             Icon(
                                                 imageVector = Icons.Default.PlayArrow,
@@ -1820,7 +1833,7 @@ service cloud.firestore {
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Text(
-                                                "تشغيل الفحص الذاتي التجريبي (Live Test)",
+                                                "تشغيل الفحص الذاتي واختبار Inpainting (Live Test)",
                                                 color = Color.Black,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold
@@ -1871,14 +1884,24 @@ service cloud.firestore {
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                val headerTitle = if (res.isNativeEngineUsed) {
+                                                    "✅ نجح اختبار محرك MTX الأصلي NDK (${res.loadedLibraryName ?: "libmtx_v8a.so"})"
+                                                } else {
+                                                    "⚡ نجح اختبار Inpainting الحقيقي (وضع توافق x86_64)"
+                                                }
+                                                val descText = if (res.isNativeEngineUsed) {
+                                                    "تم تنفيذ Inpainting المباشر عبر JNI وإزالة علامة olympustaff.com بالكامل وتطهير ${res.pixelsModified} بكسل في ${res.latencyMs} ms (الإصدار: ${res.engineVersion})."
+                                                } else {
+                                                    "تم تنفيذ Inpainting الحقيقي وإزالة علامة olympustaff.com وتطهير ${res.pixelsModified} بكسل في ${res.latencyMs} ms. مكتبات ARM الأصلية (libmtx_v8a.so و libmtx_v7a.so) محفوظة ومجهزة للهواتف الذكية."
+                                                }
                                                 Text(
-                                                    "✅ نجح الاختبار المباشر!",
+                                                    headerTitle,
                                                     color = Color(0xFF10B981),
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    "تم إنشاء مقبض المحرك وقفل بكسلات الصورة عبر JNI ومعالجتها بنجاح تام في ${res.latencyMs} ms (الإصدار: ${res.engineVersion}).",
+                                                    descText,
                                                     color = TextPrimary,
                                                     fontSize = 11.5.sp,
                                                     lineHeight = 16.sp

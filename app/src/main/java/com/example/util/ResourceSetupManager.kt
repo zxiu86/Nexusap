@@ -613,6 +613,9 @@ object ResourceSetupManager {
         )
         additionalDirs.forEach { it.mkdirs() }
 
+        // Original library filenames prioritized explicitly per user specification
+        val expectedLibName = if (targetAbi == "arm64-v8a") "libmtx_v8a.so" else "libmtx_v7a.so"
+
         while (entries.hasMoreElements()) {
             val entry = entries.nextElement()
             val simpleFileName = File(entry.name).name
@@ -647,9 +650,7 @@ object ResourceSetupManager {
                 }
             }
 
-            // Alias mirroring for expected names
-            val expectedLibName = if (targetAbi == "arm64-v8a") "libmtx_v8a.so" else "libmtx_v7a.so"
-            val aliasNames = listOf("libolympus_cleaner.so", "libmtx_v8a.so", "libmtx_v7a.so")
+            val aliasNames = listOf(expectedLibName, "libmtx_v8a.so", "libmtx_v7a.so", "libolympus_cleaner.so")
             for (alias in aliasNames) {
                 if (!alias.equals(simpleFileName, ignoreCase = true)) {
                     val mirrorFile = File(targetDir, alias)
@@ -672,7 +673,10 @@ object ResourceSetupManager {
         }
         zip.close()
 
-        val verifiedFile = File(targetDir, "libolympus_cleaner.so")
+        val verifiedFile = File(targetDir, expectedLibName).takeIf { it.exists() }
+            ?: File(targetDir, "libmtx_v8a.so").takeIf { it.exists() }
+            ?: File(targetDir, "libmtx_v7a.so").takeIf { it.exists() }
+            ?: File(targetDir, "libolympus_cleaner.so")
         if (verifiedFile.exists()) {
             Log.i(TAG, "[DIAGNOSTIC] Verified extracted library on disk: ${verifiedFile.absolutePath} (${verifiedFile.length()} bytes)")
         }
@@ -700,7 +704,8 @@ object ResourceSetupManager {
             File(context.filesDir, "olympus_engine"),
             File(context.applicationInfo.nativeLibraryDir)
         )
-        val candidateNames = listOf("libolympus_cleaner.so", "libmtx_v8a.so", "libmtx_v7a.so")
+        // Prioritize original library names
+        val candidateNames = listOf("libmtx_v8a.so", "libmtx_v7a.so", "libolympus_cleaner.so")
         val foundFiles = mutableListOf<File>()
         for (dir in candidateDirs) {
             if (!dir.exists()) continue
@@ -712,7 +717,10 @@ object ResourceSetupManager {
             }
         }
 
-        val primary = foundFiles.maxByOrNull { it.length() }
+        // Select primary prioritizing original library names
+        val primary = foundFiles.firstOrNull { it.name == "libmtx_v8a.so" }
+            ?: foundFiles.firstOrNull { it.name == "libmtx_v7a.so" }
+            ?: foundFiles.maxByOrNull { it.length() }
         var validElf = false
         if (primary != null && primary.length() >= 4) {
             try {
