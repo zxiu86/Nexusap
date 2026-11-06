@@ -195,7 +195,10 @@ data class ReaderUiState(
     val readingProgressText: String = "",
     val hasPreviousChapter: Boolean = false,
     val hasNextChapter: Boolean = false,
-    val appSettings: AppSettings = AppSettings()
+    val appSettings: AppSettings = AppSettings(),
+    val isAdmin: Boolean = false,
+    val isCleaningActive: Boolean = false,
+    val cleanedPagesCount: Int = 0
 )
 
 class MangaViewModel(application: Application) : AndroidViewModel(application) {
@@ -944,6 +947,8 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         // Immediately persist this chapter as the active and latest reading chapter
         repository.saveActiveReadingSession(mangaId, chapterNumber)
 
+        val isAdminUser = authRepository.currentUserFlow.value?.isAdmin == true
+
         _readerUiState.value = ReaderUiState(
             manga = manga,
             currentChapter = null,
@@ -954,7 +959,8 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             initialScrollPage = lastSavedPage,
             hasPreviousChapter = chapterNumber > 1,
             hasNextChapter = chapterNumber < manga.totalChaptersCount,
-            appSettings = settingsManager.settingsFlow.value
+            appSettings = settingsManager.settingsFlow.value,
+            isAdmin = isAdminUser
         )
 
         viewModelScope.launch {
@@ -974,8 +980,16 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             // فحص فوري: إذا كان الفصل غير منظف مسبقاً، تنطلق الآلية في الخلفية وتُحدّث الإحداثيات صفحة بصفحة لحظياً
             val existingCoords = cachedCoords ?: coordsRepo.getCoordinates(mangaId, chapterNumber)
             if (existingCoords != null) {
-                _readerUiState.value = _readerUiState.value.copy(coordinates = existingCoords)
+                _readerUiState.value = _readerUiState.value.copy(
+                    coordinates = existingCoords,
+                    isCleaningActive = false,
+                    cleanedPagesCount = existingCoords.pages.size
+                )
             } else if (fullChapter != null && fullChapter.pages.isNotEmpty()) {
+                _readerUiState.value = _readerUiState.value.copy(
+                    isCleaningActive = true,
+                    cleanedPagesCount = 0
+                )
                 com.example.util.WatermarkCleanerBot.cleanChapterSilently(
                     context = getApplication(),
                     seriesSlug = mangaId,
@@ -985,14 +999,21 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                             _readerUiState.value.manga?.id == mangaId
                         ) {
                             val merged = coordsRepo.mergePageCoordinates(mangaId, chapterNumber, fullChapter.pages.size, pageData)
-                            _readerUiState.value = _readerUiState.value.copy(coordinates = merged)
+                            _readerUiState.value = _readerUiState.value.copy(
+                                coordinates = merged,
+                                cleanedPagesCount = _readerUiState.value.cleanedPagesCount + 1
+                            )
                         }
                     },
                     onAllFinished = { finalDto ->
                         if (_readerUiState.value.currentChapter?.number == chapterNumber &&
                             _readerUiState.value.manga?.id == mangaId
                         ) {
-                            _readerUiState.value = _readerUiState.value.copy(coordinates = finalDto)
+                            _readerUiState.value = _readerUiState.value.copy(
+                                coordinates = finalDto,
+                                isCleaningActive = false,
+                                cleanedPagesCount = finalDto.pages.size
+                            )
                         }
                     }
                 )

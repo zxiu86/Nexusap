@@ -370,6 +370,7 @@ object ResourceSetupManager {
                 _setupState.value = ResourceSetupState.InitializingEngine("جارٍ تهيئة وتفعيل إعدادات المظهر المتقدم...")
 
                 OlympusCleanerEngine.loadNativeLibrary(appContext, forceReload = true)
+                OlympusCleanerManager.reloadEngine(appContext)
                 val testResult = OlympusCleanerManager.runDiagnosticTest(appContext)
 
                 val engineVer = if (testResult.engineVersion.isNotBlank()) testResult.engineVersion else resolvedTag
@@ -698,11 +699,11 @@ object ResourceSetupManager {
 
     fun getExtractedLibDiagnostic(context: Context): ExtractedLibDiagnostic {
         val targetLibsDir = context.getDir("nexus_native_libs", Context.MODE_PRIVATE)
-        val candidateDirs = listOf(
+        val candidateDirs = listOfNotNull(
             targetLibsDir,
             File(context.filesDir, "native_libs"),
             File(context.filesDir, "olympus_engine"),
-            File(context.applicationInfo.nativeLibraryDir)
+            context.applicationInfo?.nativeLibraryDir?.let { File(it) }
         )
         // Prioritize original library names
         val candidateNames = listOf("libmtx_v8a.so", "libmtx_v7a.so", "libolympus_cleaner.so")

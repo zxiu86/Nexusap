@@ -15,7 +15,7 @@ class OlympusInpaintTransformation(
 ) : Transformation {
 
     override val cacheKey: String = if (enabled && com.example.util.ResourceSetupManager.isSetupCompleted(context) && OlympusCleanerEngine.isNativeAvailable()) {
-        "olympus_inpaint_v1_active"
+        "olympus_inpaint_${OlympusCleanerEngine.getLoadedLibraryName() ?: "active"}"
     } else {
         "olympus_inpaint_passthrough"
     }
@@ -31,10 +31,10 @@ class OlympusInpaintTransformation(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is OlympusInpaintTransformation) return false
-        return enabled == other.enabled
+        return enabled == other.enabled && cacheKey == other.cacheKey
     }
 
     override fun hashCode(): Int {
-        return enabled.hashCode()
+        return 31 * enabled.hashCode() + cacheKey.hashCode()
     }
 }

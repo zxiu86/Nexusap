@@ -331,6 +331,20 @@ fun ReaderScreen(
         onNextChapter()
     }
 
+    // 🛡️ Admin cleaner indicator state: only active if user is admin
+    var showAdminCleanerIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(chapter.number, uiState.isCleaningActive, uiState.cleanedPagesCount, uiState.isAdmin) {
+        if (uiState.isAdmin && (uiState.isCleaningActive || uiState.cleanedPagesCount > 0)) {
+            showAdminCleanerIndicator = true
+            if (!uiState.isCleaningActive) {
+                kotlinx.coroutines.delay(5000L)
+                showAdminCleanerIndicator = false
+            }
+        } else {
+            showAdminCleanerIndicator = false
+        }
+    }
+
     // Automatically record reading progress as user scrolls
     LaunchedEffect(currentVisiblePage, totalPages) {
         if (totalPages > 0) {
@@ -565,6 +579,63 @@ fun ReaderScreen(
                 isFavorite = uiState.isFavorite,
                 onToggleFavorite = onToggleFavorite
             )
+        }
+
+        // 🛡️ Admin Cleaner Indicator (Only rendered for Admins when navigating between chapters)
+        if (uiState.isAdmin) {
+            AnimatedVisibility(
+                visible = showAdminCleanerIndicator,
+                enter = slideInVertically { -it } + fadeIn(),
+                exit = slideOutVertically { -it } + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (showControls) 80.dp else 24.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = androidx.compose.ui.graphics.Color(0xDD0F172A),
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFF10B981).copy(alpha = 0.6f)),
+                    shadowElevation = 6.dp,
+                    modifier = Modifier
+                        .clickable { showAdminCleanerIndicator = false }
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        if (uiState.isCleaningActive) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                color = androidx.compose.ui.graphics.Color(0xFF10B981),
+                                modifier = Modifier.size(13.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(androidx.compose.ui.graphics.Color(0xFF10B981), CircleShape)
+                            )
+                        }
+
+                        val indicatorText = if (uiState.isCleaningActive) {
+                            "محرك التنظيف نشط • معالجة الفصل ${chapter.number} (${uiState.cleanedPagesCount}/${totalPages} ص)"
+                        } else {
+                            "محرك التنظيف جاهز • تم تنظيف الفصل ${chapter.number} (${uiState.cleanedPagesCount} ص)"
+                        }
+
+                        Text(
+                            text = indicatorText,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = androidx.compose.ui.graphics.Color(0xFFE2E8F0),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         // Bottom Floating Navigation Bar (Previous, Quick Jump List, Next) + Liquid Glass Loading Mode Capsule
@@ -1054,6 +1125,7 @@ fun ComicPageItem(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(imageUrl)
                             .crossfade(true)
+                            .memoryCacheKey("${imageUrl}_${if (com.olympus.cleaner.OlympusCleanerEngine.isNativeAvailable()) "cleaned" else "raw"}")
                             .transformations(com.olympus.cleaner.OlympusInpaintTransformation(LocalContext.current))
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             // 🚀 منع التطبيق من إدخال الفصول في الكاش الثابت للقرص:

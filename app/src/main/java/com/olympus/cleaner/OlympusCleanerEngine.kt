@@ -127,11 +127,11 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
             // 2. Direct path loading via nexus_native_libs or nativeLibraryDir if context available
             if (ctx != null) {
                 try {
-                    val searchDirs = listOf(
+                    val searchDirs = listOfNotNull(
                         ctx.getDir("nexus_native_libs", Context.MODE_PRIVATE),
                         java.io.File(ctx.filesDir, "native_libs"),
                         java.io.File(ctx.filesDir, "olympus_engine"),
-                        java.io.File(ctx.applicationInfo.nativeLibraryDir)
+                        ctx.applicationInfo?.nativeLibraryDir?.let { java.io.File(it) }
                     )
                     for (nativeDir in searchDirs) {
                         if (loaded) break
@@ -619,6 +619,8 @@ class OlympusCleanerEngine private constructor(private val nativeHandle: Long) :
                 inputSoftwareBitmap.height,
                 Bitmap.Config.ARGB_8888
             )
+            val canvas = Canvas(outputBitmap)
+            canvas.drawBitmap(inputSoftwareBitmap, 0f, 0f, null)
 
             val status = nativeProcessBitmap(nativeHandle, inputSoftwareBitmap, outputBitmap, false)
 

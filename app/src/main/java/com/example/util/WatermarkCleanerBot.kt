@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import coil.Coil
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.data.model.Chapter
@@ -128,6 +129,13 @@ object WatermarkCleanerBot {
                         if (cleaned !== bitmap) {
                             totalCleanedPages++
                             AppSettingsManager.getInstance(context).incrementCleanedWatermarksCount(1)
+                            runCatching {
+                                val loader = Coil.imageLoader(context)
+                                loader.memoryCache?.set(
+                                    MemoryCache.Key("${imageUrl}_cleaned"),
+                                    MemoryCache.Value(cleaned)
+                                )
+                            }
                         }
                     } catch (e: Exception) {
                         Log.d(TAG, "Page $pNum inpainting note: ${e.message}")
